@@ -1,0 +1,5 @@
+raw_trip_dataset_path: data/raw/trips.csv
+
+synthetic_dataset:
+  seed: 42
+  num_samples: 100000
