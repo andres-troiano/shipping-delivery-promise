@@ -1,0 +1,24 @@
+{
+  "validation": {
+    "coverage_q50_q90": 0.392067,
+    "avg_interval_width_q50_q90": 26.350106,
+    "late_rate_vs_q90": 0.115,
+    "pinball_loss_q50": 8.500879,
+    "pinball_loss_q90": 3.793539,
+    "calibration_q50": 0.492933,
+    "calibration_q90": 0.885
+  },
+  "test": {
+    "coverage_q50_q90": 0.39,
+    "avg_interval_width_q50_q90": 26.11279,
+    "late_rate_vs_q90": 0.118733,
+    "pinball_loss_q50": 8.387,
+    "pinball_loss_q90": 3.815315,
+    "calibration_q50": 0.491267,
+    "calibration_q90": 0.881267
+  },
+  "quantile_crossing_corrections": {
+    "validation": 0,
+    "test": 0
+  }
+}

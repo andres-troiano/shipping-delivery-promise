@@ -1,20 +1,329 @@
-"""Placeholder entry point for quantile-model training."""
+"""Train quantile models for interval-aware delivery lead time prediction."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+import joblib
+import numpy as np
+import pandas as pd
+from lightgbm import LGBMRegressor
+from sklearn.metrics import mean_pinball_loss
+from sklearn.pipeline import Pipeline
 
 from src.config_utils import load_config
+from src.train_model import (
+    build_preprocessor,
+    clip_predictions,
+    extract_feature_importance,
+    load_datasets,
+    resolve_feature_columns,
+    validate_datasets,
+)
+
+REQUIRED_QUANTILES = [0.5, 0.9]
+
+
+def validate_config(config: dict[str, Any]) -> None:
+    """Validate quantile-stage configuration before training starts."""
+    required_top_level_keys = [
+        "target_column",
+        "data",
+        "artifacts",
+        "features",
+        "training",
+        "lightgbm_params",
+        "evaluation",
+        "quantiles",
+    ]
+    missing_keys = [key for key in required_top_level_keys if key not in config]
+    if missing_keys:
+        raise ValueError(f"Missing model config keys: {missing_keys}")
+
+    for split_name in ["train_path", "val_path", "test_path"]:
+        dataset_path = Path(config["data"][split_name])
+        if not dataset_path.exists():
+            raise FileNotFoundError(
+                f"Configured dataset for '{split_name}' was not found at '{dataset_path}'."
+            )
+
+    quantiles = config["quantiles"]
+    if not quantiles:
+        raise ValueError("At least one quantile must be configured.")
+    if any(q <= 0 or q >= 1 for q in quantiles):
+        raise ValueError("Configured quantiles must all be between 0 and 1.")
+
+    missing_required = [q for q in REQUIRED_QUANTILES if q not in quantiles]
+    if missing_required:
+        raise ValueError(
+            f"Required quantiles are missing from config: {missing_required}"
+        )
+
+    clip_min_prediction = config["evaluation"]["clip_min_prediction"]
+    if clip_min_prediction < 0:
+        raise ValueError("clip_min_prediction must be non-negative.")
+
+    artifacts_dir = Path(config["artifacts"]["quantile_model_dir"])
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+
+def build_quantile_pipeline(
+    config: dict[str, Any],
+    categorical_columns: list[str],
+    numeric_columns: list[str],
+    quantile: float,
+) -> Pipeline:
+    """Build a preprocessing-plus-LightGBM pipeline for a single quantile."""
+    random_seed = config["training"]["random_seed"]
+    lightgbm_params = dict(config["lightgbm_params"])
+    lightgbm_params.update(
+        {
+            "objective": "quantile",
+            "alpha": quantile,
+            "random_state": random_seed,
+            "feature_fraction_seed": random_seed,
+            "bagging_seed": random_seed,
+            "data_random_seed": random_seed,
+        }
+    )
+
+    preprocessor = build_preprocessor(categorical_columns, numeric_columns)
+    model = LGBMRegressor(**lightgbm_params)
+
+    return Pipeline(
+        steps=[
+            ("preprocessor", preprocessor),
+            ("model", model),
+        ]
+    )
+
+
+def fit_quantile_models(
+    x_train: pd.DataFrame,
+    y_train: pd.Series,
+    config: dict[str, Any],
+    categorical_columns: list[str],
+    numeric_columns: list[str],
+) -> dict[float, Pipeline]:
+    """Fit one model per required quantile."""
+    models: dict[float, Pipeline] = {}
+
+    for quantile in REQUIRED_QUANTILES:
+        model_pipeline = build_quantile_pipeline(
+            config=config,
+            categorical_columns=categorical_columns,
+            numeric_columns=numeric_columns,
+            quantile=quantile,
+        )
+        model_pipeline.fit(x_train, y_train)
+        models[quantile] = model_pipeline
+
+    return models
+
+
+def generate_interval_predictions(
+    df: pd.DataFrame,
+    actual: pd.Series,
+    models: dict[float, Pipeline],
+    config: dict[str, Any],
+    split_name: str,
+) -> tuple[pd.DataFrame, int]:
+    """Generate q50/q90 predictions, interval fields, and crossing corrections."""
+    clip_min_prediction = config["evaluation"]["clip_min_prediction"]
+    pred_q50 = clip_predictions(models[0.5].predict(df), clip_min_prediction)
+    pred_q90 = clip_predictions(models[0.9].predict(df), clip_min_prediction)
+
+    crossing_corrections = 0
+    if config["evaluation"].get("enforce_monotonic_quantiles", False):
+        crossing_mask = pred_q90 < pred_q50
+        crossing_corrections = int(crossing_mask.sum())
+        pred_q90 = np.maximum(pred_q90, pred_q50)
+
+    interval_df = pd.DataFrame(
+        {
+            "actual_lead_time_minutes": actual.to_numpy(),
+            "pred_q50": pred_q50,
+            "pred_q90": pred_q90,
+            "split": split_name,
+        },
+        index=df.index,
+    )
+    interval_df["interval_lower"] = interval_df["pred_q50"]
+    interval_df["interval_upper"] = interval_df["pred_q90"]
+    interval_df["interval_width"] = (
+        interval_df["interval_upper"] - interval_df["interval_lower"]
+    )
+    interval_df["is_late_vs_upper"] = (
+        interval_df["actual_lead_time_minutes"] > interval_df["interval_upper"]
+    )
+    interval_df["is_within_interval"] = (
+        (interval_df["interval_lower"] <= interval_df["actual_lead_time_minutes"])
+        & (interval_df["actual_lead_time_minutes"] <= interval_df["interval_upper"])
+    )
+
+    for optional_column in ["seller_category", "hour_of_day", "is_peak_hour"]:
+        if optional_column in df.columns:
+            interval_df[optional_column] = df[optional_column].to_numpy()
+
+    return interval_df, crossing_corrections
+
+
+def compute_interval_metrics(
+    actual: pd.Series, interval_df: pd.DataFrame
+) -> dict[str, float]:
+    """Compute interval-quality and quantile-calibration metrics."""
+    actual_array = actual.to_numpy()
+    pred_q50 = interval_df["pred_q50"].to_numpy()
+    pred_q90 = interval_df["pred_q90"].to_numpy()
+
+    metrics = {
+        "coverage_q50_q90": round(float(interval_df["is_within_interval"].mean()), 6),
+        "avg_interval_width_q50_q90": round(
+            float(interval_df["interval_width"].mean()), 6
+        ),
+        "late_rate_vs_q90": round(float(interval_df["is_late_vs_upper"].mean()), 6),
+        "pinball_loss_q50": round(
+            float(mean_pinball_loss(actual_array, pred_q50, alpha=0.5)), 6
+        ),
+        "pinball_loss_q90": round(
+            float(mean_pinball_loss(actual_array, pred_q90, alpha=0.9)), 6
+        ),
+        "calibration_q50": round(float(np.mean(actual_array <= pred_q50)), 6),
+        "calibration_q90": round(float(np.mean(actual_array <= pred_q90)), 6),
+    }
+    return metrics
+
+
+def save_artifacts(
+    models: dict[float, Pipeline],
+    metrics: dict[str, Any],
+    val_predictions: pd.DataFrame,
+    test_predictions: pd.DataFrame,
+    feature_importances: dict[float, pd.DataFrame],
+    config: dict[str, Any],
+) -> Path:
+    """Persist Stage 4 models, metrics, predictions, and importances."""
+    artifacts_dir = Path(config["artifacts"]["quantile_model_dir"])
+    artifacts_dir.mkdir(parents=True, exist_ok=True)
+
+    joblib.dump(models[0.5], artifacts_dir / "q50_model.pkl")
+    joblib.dump(models[0.9], artifacts_dir / "q90_model.pkl")
+    (artifacts_dir / "metrics.json").write_text(
+        json.dumps(metrics, indent=2), encoding="utf-8"
+    )
+    val_predictions.to_csv(artifacts_dir / "interval_predictions_val.csv", index=False)
+    test_predictions.to_csv(
+        artifacts_dir / "interval_predictions_test.csv", index=False
+    )
+    feature_importances[0.5].to_csv(
+        artifacts_dir / "feature_importance_q50.csv", index=False
+    )
+    feature_importances[0.9].to_csv(
+        artifacts_dir / "feature_importance_q90.csv", index=False
+    )
+
+    return artifacts_dir
 
 
 def main() -> None:
-    """Run the Stage 1 placeholder for quantile-model training."""
-    model_config = load_config("config/model_config.yaml")
-    quantiles = model_config.get("quantiles", [])
+    """Train q50 and q90 models and save interval artifacts."""
+    print("Running quantile-model training pipeline.")
+    config = load_config("config/model_config.yaml")
+    validate_config(config)
 
-    # TODO: Load the processed dataset used for quantile model training.
-    # TODO: Train one quantile model per requested quantile level.
-    # TODO: Produce interval-oriented prediction outputs from trained models.
-    # TODO: Persist the trained quantile models for later evaluation.
-    print("Running train_quantiles.py - Stage 1 placeholder")
-    print("Quantile training not implemented yet.")
-    print(f"Configured quantiles: {quantiles}")
+    random_seed = config["training"]["random_seed"]
+    np.random.seed(random_seed)
+
+    print("Loading processed datasets.")
+    datasets = load_datasets(config)
+    validate_datasets(datasets, config)
+
+    train_df = datasets["train"]
+    val_df = datasets["validation"]
+    test_df = datasets["test"]
+    target_column = config["target_column"]
+
+    feature_columns, categorical_columns, numeric_columns = resolve_feature_columns(
+        train_df, config
+    )
+
+    x_train = train_df[feature_columns]
+    y_train = train_df[target_column]
+    x_val = val_df[feature_columns]
+    y_val = val_df[target_column]
+    x_test = test_df[feature_columns]
+    y_test = test_df[target_column]
+
+    print("Training quantile models.")
+    models = fit_quantile_models(
+        x_train=x_train,
+        y_train=y_train,
+        config=config,
+        categorical_columns=categorical_columns,
+        numeric_columns=numeric_columns,
+    )
+
+    val_predictions, val_crossing_corrections = generate_interval_predictions(
+        df=x_val,
+        actual=y_val,
+        models=models,
+        config=config,
+        split_name="validation",
+    )
+    test_predictions, test_crossing_corrections = generate_interval_predictions(
+        df=x_test,
+        actual=y_test,
+        models=models,
+        config=config,
+        split_name="test",
+    )
+
+    metrics = {
+        "validation": compute_interval_metrics(y_val, val_predictions),
+        "test": compute_interval_metrics(y_test, test_predictions),
+        "quantile_crossing_corrections": {
+            "validation": val_crossing_corrections,
+            "test": test_crossing_corrections,
+        },
+    }
+
+    feature_importances = {
+        0.5: extract_feature_importance(models[0.5]),
+        0.9: extract_feature_importance(models[0.9]),
+    }
+
+    artifacts_dir = save_artifacts(
+        models=models,
+        metrics=metrics,
+        val_predictions=val_predictions,
+        test_predictions=test_predictions,
+        feature_importances=feature_importances,
+        config=config,
+    )
+
+    print("Quantile training complete.")
+    print(f"Train rows: {len(train_df)}")
+    print(f"Validation rows: {len(val_df)}")
+    print(f"Test rows: {len(test_df)}")
+    print(f"Resolved numeric features: {numeric_columns}")
+    print(f"Resolved categorical features: {categorical_columns}")
+    print(f"Trained quantiles: {REQUIRED_QUANTILES}")
+    print(f"Validation coverage: {metrics['validation']['coverage_q50_q90']}")
+    print(
+        "Validation interval width: "
+        f"{metrics['validation']['avg_interval_width_q50_q90']}"
+    )
+    print(f"Validation late rate: {metrics['validation']['late_rate_vs_q90']}")
+    print(f"Test coverage: {metrics['test']['coverage_q50_q90']}")
+    print(f"Test interval width: {metrics['test']['avg_interval_width_q50_q90']}")
+    print(f"Test late rate: {metrics['test']['late_rate_vs_q90']}")
+    print(
+        "Quantile crossing corrections: "
+        f"validation={val_crossing_corrections}, test={test_crossing_corrections}"
+    )
+    print(f"Artifacts saved to: {artifacts_dir}")
 
 
 if __name__ == "__main__":

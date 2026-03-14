@@ -7,6 +7,7 @@ data:
 
 artifacts:
   point_model_dir: artifacts/point_model
+  quantile_model_dir: artifacts/quantile_model
 
 features:
   categorical:
@@ -37,6 +38,7 @@ lightgbm_params:
 
 evaluation:
   clip_min_prediction: 1.0
+  enforce_monotonic_quantiles: true
 
 quantiles:
   - 0.5
