@@ -1,5 +1,55 @@
-raw_trip_dataset_path: data/raw/trips.csv
+raw_trip_dataset_path: data/raw/nyc_taxi_train.csv
+processed_output_dir: data/processed
 
-synthetic_dataset:
-  seed: 42
-  num_samples: 100000
+random_seed: 42
+sample_size: 100000
+
+transport_filter:
+  min_duration_seconds: 180
+  max_duration_seconds: 7200
+
+geo_filter:
+  min_lat: 40.5
+  max_lat: 41.0
+  min_lon: -74.2
+  max_lon: -73.6
+
+distance_filter:
+  min_trip_distance_km: 0.1
+
+target:
+  min_lead_time_minutes: 15
+  max_lead_time_minutes: 1440
+
+synthetic:
+  seller_category_probs:
+    restaurant: 0.25
+    pharmacy: 0.15
+    supermarket: 0.20
+    fashion: 0.20
+    electronics: 0.20
+
+  prep_time_by_seller_category:
+    restaurant: {mean: 20, std: 8}
+    pharmacy: {mean: 12, std: 5}
+    supermarket: {mean: 30, std: 10}
+    fashion: {mean: 90, std: 30}
+    electronics: {mean: 120, std: 40}
+
+  pickup_delay:
+    base_mean: 10
+    base_std: 5
+
+  seller_reliability_range: [0.7, 0.99]
+  courier_load_range: [0.0, 1.0]
+  order_size_range: [1, 5]
+  priority_probability: 0.15
+  prep_time_clip: [3, 240]
+  pickup_delay_clip: [0, 120]
+  congestion_factor_range: [1.05, 1.15]
+
+split:
+  train_frac: 0.7
+  val_frac: 0.15
+  test_frac: 0.15
+  time_aware: true
