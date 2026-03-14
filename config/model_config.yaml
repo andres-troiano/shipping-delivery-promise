@@ -18,6 +18,10 @@ features:
     - delivery_duration_minutes
     - pickup_datetime
     - split
+  # Numeric features are inferred automatically as:
+  # all_columns - categorical - exclude_columns
+  # This avoids configuration drift if new features are added
+  # during dataset construction.
 
 training:
   random_seed: 42
