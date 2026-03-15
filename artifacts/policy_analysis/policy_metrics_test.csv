@@ -1,4 +1,4 @@
 policy_name,lower_quantile,upper_quantile,avg_interval_width,late_delivery_rate,coverage,early_before_start_rate,avg_promise_start,avg_promise_end,n_rows_used,order_corrections,late_rate_rank,width_rank,pareto_efficient
-conservative_q25_q95,0.25,0.95,46.614595,0.0694,0.680533,0.250067,101.529877,148.144472,15000,0,1,3,True
-balanced_q25_q90,0.25,0.9,39.666037,0.118733,0.6312,0.250067,101.529877,141.195914,15000,0,2,2,True
-aggressive_q25_q80,0.25,0.8,30.869046,0.217667,0.532267,0.250067,101.529877,132.398923,15000,0,3,1,True
+conservative_q10_q95,0.1,0.95,59.075275,0.0694,0.8258,0.1048,89.069197,148.144472,15000,0,1,3,True
+balanced_q10_q90,0.1,0.9,52.126717,0.118733,0.776467,0.1048,89.069197,141.195914,15000,0,2,2,True
+aggressive_q10_q80,0.1,0.8,43.329727,0.217667,0.677533,0.1048,89.069197,132.398923,15000,0,3,1,True

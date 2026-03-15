@@ -42,7 +42,7 @@ evaluation:
   enforce_monotonic_quantiles: true
 
 quantiles:
-  - 0.25
+  - 0.1
   - 0.5
   - 0.8
   - 0.9
@@ -52,14 +52,14 @@ policy_evaluation:
   validation_predictions_path: artifacts/quantile_model/interval_predictions_val.csv
   test_predictions_path: artifacts/quantile_model/interval_predictions_test.csv
   policies:
-    - name: aggressive_q25_q80
-      lower_quantile: 0.25
+    - name: aggressive_q10_q80
+      lower_quantile: 0.1
       upper_quantile: 0.8
-    - name: balanced_q25_q90
-      lower_quantile: 0.25
+    - name: balanced_q10_q90
+      lower_quantile: 0.1
       upper_quantile: 0.9
-    - name: conservative_q25_q95
-      lower_quantile: 0.25
+    - name: conservative_q10_q95
+      lower_quantile: 0.1
       upper_quantile: 0.95
   selection:
     max_late_delivery_rate: 0.10

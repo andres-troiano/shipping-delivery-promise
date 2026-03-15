@@ -1,20 +1,20 @@
 {
   "evaluated_policies": [
-    "conservative_q25_q95",
-    "balanced_q25_q90",
-    "aggressive_q25_q80"
+    "conservative_q10_q95",
+    "balanced_q10_q90",
+    "aggressive_q10_q80"
   ],
   "skipped_policies": {},
-  "reference_policy": "conservative_q25_q95",
+  "reference_policy": "conservative_q10_q95",
   "validation_metrics": {
-    "conservative_q25_q95": {
-      "lower_quantile": 0.25,
+    "conservative_q10_q95": {
+      "lower_quantile": 0.1,
       "upper_quantile": 0.95,
-      "avg_interval_width": 47.120755,
+      "avg_interval_width": 59.71322,
       "late_delivery_rate": 0.064867,
-      "coverage": 0.677733,
-      "early_before_start_rate": 0.2574,
-      "avg_promise_start": 102.049751,
+      "coverage": 0.8274,
+      "early_before_start_rate": 0.107733,
+      "avg_promise_start": 89.457287,
       "avg_promise_end": 149.170507,
       "n_rows_used": 15000,
       "order_corrections": 0,
@@ -22,14 +22,14 @@
       "width_rank": 3,
       "pareto_efficient": true
     },
-    "balanced_q25_q90": {
-      "lower_quantile": 0.25,
+    "balanced_q10_q90": {
+      "lower_quantile": 0.1,
       "upper_quantile": 0.9,
-      "avg_interval_width": 40.07442,
+      "avg_interval_width": 52.666885,
       "late_delivery_rate": 0.114533,
-      "coverage": 0.628067,
-      "early_before_start_rate": 0.2574,
-      "avg_promise_start": 102.049751,
+      "coverage": 0.777733,
+      "early_before_start_rate": 0.107733,
+      "avg_promise_start": 89.457287,
       "avg_promise_end": 142.124171,
       "n_rows_used": 15000,
       "order_corrections": 0,
@@ -37,14 +37,14 @@
       "width_rank": 2,
       "pareto_efficient": true
     },
-    "aggressive_q25_q80": {
-      "lower_quantile": 0.25,
+    "aggressive_q10_q80": {
+      "lower_quantile": 0.1,
       "upper_quantile": 0.8,
-      "avg_interval_width": 31.208578,
+      "avg_interval_width": 43.801043,
       "late_delivery_rate": 0.2124,
-      "coverage": 0.5302,
-      "early_before_start_rate": 0.2574,
-      "avg_promise_start": 102.049751,
+      "coverage": 0.679867,
+      "early_before_start_rate": 0.107733,
+      "avg_promise_start": 89.457287,
       "avg_promise_end": 133.258329,
       "n_rows_used": 15000,
       "order_corrections": 0,
@@ -54,14 +54,14 @@
     }
   },
   "test_metrics": {
-    "conservative_q25_q95": {
-      "lower_quantile": 0.25,
+    "conservative_q10_q95": {
+      "lower_quantile": 0.1,
       "upper_quantile": 0.95,
-      "avg_interval_width": 46.614595,
+      "avg_interval_width": 59.075275,
       "late_delivery_rate": 0.0694,
-      "coverage": 0.680533,
-      "early_before_start_rate": 0.250067,
-      "avg_promise_start": 101.529877,
+      "coverage": 0.8258,
+      "early_before_start_rate": 0.1048,
+      "avg_promise_start": 89.069197,
       "avg_promise_end": 148.144472,
       "n_rows_used": 15000,
       "order_corrections": 0,
@@ -69,14 +69,14 @@
       "width_rank": 3,
       "pareto_efficient": true
     },
-    "balanced_q25_q90": {
-      "lower_quantile": 0.25,
+    "balanced_q10_q90": {
+      "lower_quantile": 0.1,
       "upper_quantile": 0.9,
-      "avg_interval_width": 39.666037,
+      "avg_interval_width": 52.126717,
       "late_delivery_rate": 0.118733,
-      "coverage": 0.6312,
-      "early_before_start_rate": 0.250067,
-      "avg_promise_start": 101.529877,
+      "coverage": 0.776467,
+      "early_before_start_rate": 0.1048,
+      "avg_promise_start": 89.069197,
       "avg_promise_end": 141.195914,
       "n_rows_used": 15000,
       "order_corrections": 0,
@@ -84,14 +84,14 @@
       "width_rank": 2,
       "pareto_efficient": true
     },
-    "aggressive_q25_q80": {
-      "lower_quantile": 0.25,
+    "aggressive_q10_q80": {
+      "lower_quantile": 0.1,
       "upper_quantile": 0.8,
-      "avg_interval_width": 30.869046,
+      "avg_interval_width": 43.329727,
       "late_delivery_rate": 0.217667,
-      "coverage": 0.532267,
-      "early_before_start_rate": 0.250067,
-      "avg_promise_start": 101.529877,
+      "coverage": 0.677533,
+      "early_before_start_rate": 0.1048,
+      "avg_promise_start": 89.069197,
       "avg_promise_end": 132.398923,
       "n_rows_used": 15000,
       "order_corrections": 0,

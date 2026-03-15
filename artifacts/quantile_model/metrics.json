@@ -1,11 +1,11 @@
 {
   "validation": {
     "coverage_q50_q90": 0.392533,
-    "avg_interval_width_q50_q90": 26.356857,
+    "avg_interval_width_q50_q90": 26.35752,
     "late_rate_vs_q90": 0.114533,
-    "pinball_loss_q25": 6.776678,
-    "calibration_q25": 0.2574,
-    "pinball_loss_q50": 8.500549,
+    "pinball_loss_q10": 3.764931,
+    "calibration_q10": 0.107733,
+    "pinball_loss_q50": 8.500879,
     "calibration_q50": 0.492933,
     "pinball_loss_q80": 6.008935,
     "calibration_q80": 0.7876,
@@ -15,13 +15,13 @@
     "calibration_q95": 0.935133
   },
   "test": {
-    "coverage_q50_q90": 0.389933,
-    "avg_interval_width_q50_q90": 26.117732,
+    "coverage_q50_q90": 0.39,
+    "avg_interval_width_q50_q90": 26.118181,
     "late_rate_vs_q90": 0.118733,
-    "pinball_loss_q25": 6.610621,
-    "calibration_q25": 0.250067,
-    "pinball_loss_q50": 8.387045,
-    "calibration_q50": 0.491333,
+    "pinball_loss_q10": 3.64176,
+    "calibration_q10": 0.1048,
+    "pinball_loss_q50": 8.386975,
+    "calibration_q50": 0.491267,
     "pinball_loss_q80": 6.00931,
     "calibration_q80": 0.782333,
     "pinball_loss_q90": 3.815055,
@@ -30,7 +30,7 @@
     "calibration_q95": 0.9306
   },
   "quantile_crossing_corrections": {
-    "validation": 429,
-    "test": 454
+    "validation": 420,
+    "test": 443
   }
 }
