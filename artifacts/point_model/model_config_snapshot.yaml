@@ -5,6 +5,8 @@ data:
   test_path: data/processed/test.csv
 artifacts:
   point_model_dir: artifacts/point_model
+  quantile_model_dir: artifacts/quantile_model
+  policy_analysis_dir: artifacts/policy_analysis
 features:
   categorical:
   - seller_category
@@ -27,6 +29,31 @@ lightgbm_params:
   colsample_bytree: 0.8
 evaluation:
   clip_min_prediction: 1.0
+  enforce_monotonic_quantiles: true
 quantiles:
+- 0.1
 - 0.5
+- 0.8
 - 0.9
+- 0.95
+policy_evaluation:
+  validation_predictions_path: artifacts/quantile_model/interval_predictions_val.csv
+  test_predictions_path: artifacts/quantile_model/interval_predictions_test.csv
+  policies:
+  - name: aggressive_q10_q80
+    lower_quantile: 0.1
+    upper_quantile: 0.8
+  - name: balanced_q10_q90
+    lower_quantile: 0.1
+    upper_quantile: 0.9
+  - name: conservative_q10_q95
+    lower_quantile: 0.1
+    upper_quantile: 0.95
+  selection:
+    max_late_delivery_rate: 0.1
+    fallback: lowest_late_rate
+  plot:
+    annotate_points: true
+    figsize:
+    - 8
+    - 6
