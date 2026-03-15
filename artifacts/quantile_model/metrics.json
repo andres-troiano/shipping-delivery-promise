@@ -1,24 +1,32 @@
 {
   "validation": {
-    "coverage_q50_q90": 0.392067,
-    "avg_interval_width_q50_q90": 26.350106,
-    "late_rate_vs_q90": 0.115,
+    "coverage_q50_q90": 0.392533,
+    "avg_interval_width_q50_q90": 26.35752,
+    "late_rate_vs_q90": 0.114533,
     "pinball_loss_q50": 8.500879,
-    "pinball_loss_q90": 3.793539,
     "calibration_q50": 0.492933,
-    "calibration_q90": 0.885
+    "pinball_loss_q80": 6.008935,
+    "calibration_q80": 0.7876,
+    "pinball_loss_q90": 3.792694,
+    "calibration_q90": 0.885467,
+    "pinball_loss_q95": 2.272437,
+    "calibration_q95": 0.935133
   },
   "test": {
     "coverage_q50_q90": 0.39,
-    "avg_interval_width_q50_q90": 26.11279,
+    "avg_interval_width_q50_q90": 26.118232,
     "late_rate_vs_q90": 0.118733,
     "pinball_loss_q50": 8.387,
-    "pinball_loss_q90": 3.815315,
     "calibration_q50": 0.491267,
-    "calibration_q90": 0.881267
+    "pinball_loss_q80": 6.00931,
+    "calibration_q80": 0.782333,
+    "pinball_loss_q90": 3.815055,
+    "calibration_q90": 0.881267,
+    "pinball_loss_q95": 2.28623,
+    "calibration_q95": 0.9306
   },
   "quantile_crossing_corrections": {
-    "validation": 0,
-    "test": 0
+    "validation": 420,
+    "test": 442
   }
 }

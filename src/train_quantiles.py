@@ -23,7 +23,7 @@ from src.train_model import (
     validate_datasets,
 )
 
-REQUIRED_QUANTILES = [0.5, 0.9]
+CANONICAL_INTERVAL_QUANTILES = [0.5, 0.9]
 
 
 def validate_config(config: dict[str, Any]) -> None:
@@ -54,8 +54,10 @@ def validate_config(config: dict[str, Any]) -> None:
         raise ValueError("At least one quantile must be configured.")
     if any(q <= 0 or q >= 1 for q in quantiles):
         raise ValueError("Configured quantiles must all be between 0 and 1.")
+    if len(set(quantiles)) != len(quantiles):
+        raise ValueError("Configured quantiles must be unique.")
 
-    missing_required = [q for q in REQUIRED_QUANTILES if q not in quantiles]
+    missing_required = [q for q in CANONICAL_INTERVAL_QUANTILES if q not in quantiles]
     if missing_required:
         raise ValueError(
             f"Required quantiles are missing from config: {missing_required}"
@@ -100,6 +102,11 @@ def build_quantile_pipeline(
     )
 
 
+def quantile_label(quantile: float) -> str:
+    """Convert a quantile float into a stable artifact label like q40 or q95."""
+    return f"q{int(round(quantile * 100)):02d}"
+
+
 def fit_quantile_models(
     x_train: pd.DataFrame,
     y_train: pd.Series,
@@ -107,10 +114,11 @@ def fit_quantile_models(
     categorical_columns: list[str],
     numeric_columns: list[str],
 ) -> dict[float, Pipeline]:
-    """Fit one model per required quantile."""
+    """Fit one model per configured quantile."""
     models: dict[float, Pipeline] = {}
+    quantiles = sorted(config["quantiles"])
 
-    for quantile in REQUIRED_QUANTILES:
+    for quantile in quantiles:
         model_pipeline = build_quantile_pipeline(
             config=config,
             categorical_columns=categorical_columns,
@@ -130,28 +138,29 @@ def generate_interval_predictions(
     config: dict[str, Any],
     split_name: str,
 ) -> tuple[pd.DataFrame, int]:
-    """Generate q50/q90 predictions, interval fields, and crossing corrections."""
+    """Generate quantile predictions, interval fields, and crossing corrections."""
     clip_min_prediction = config["evaluation"]["clip_min_prediction"]
-    pred_q50 = clip_predictions(models[0.5].predict(df), clip_min_prediction)
-    pred_q90 = clip_predictions(models[0.9].predict(df), clip_min_prediction)
+    quantiles = sorted(config["quantiles"])
+    prediction_columns = [f"pred_{quantile_label(q)}" for q in quantiles]
+    prediction_matrix = np.column_stack(
+        [
+            clip_predictions(models[q].predict(df), clip_min_prediction)
+            for q in quantiles
+        ]
+    )
 
     crossing_corrections = 0
     if config["evaluation"].get("enforce_monotonic_quantiles", False):
-        crossing_mask = pred_q90 < pred_q50
-        crossing_corrections = int(crossing_mask.sum())
-        pred_q90 = np.maximum(pred_q90, pred_q50)
+        corrected_matrix = np.maximum.accumulate(prediction_matrix, axis=1)
+        row_changed_mask = np.any(corrected_matrix != prediction_matrix, axis=1)
+        crossing_corrections = int(row_changed_mask.sum())
+        prediction_matrix = corrected_matrix
 
-    interval_df = pd.DataFrame(
-        {
-            "actual_lead_time_minutes": actual.to_numpy(),
-            "pred_q50": pred_q50,
-            "pred_q90": pred_q90,
-            "split": split_name,
-        },
-        index=df.index,
-    )
-    interval_df["interval_lower"] = interval_df["pred_q50"]
-    interval_df["interval_upper"] = interval_df["pred_q90"]
+    interval_df = pd.DataFrame(prediction_matrix, columns=prediction_columns, index=df.index)
+    interval_df.insert(0, "actual_lead_time_minutes", actual.to_numpy())
+    interval_df["split"] = split_name
+    interval_df["interval_lower"] = interval_df[f"pred_{quantile_label(0.5)}"]
+    interval_df["interval_upper"] = interval_df[f"pred_{quantile_label(0.9)}"]
     interval_df["interval_width"] = (
         interval_df["interval_upper"] - interval_df["interval_lower"]
     )
@@ -163,7 +172,12 @@ def generate_interval_predictions(
         & (interval_df["actual_lead_time_minutes"] <= interval_df["interval_upper"])
     )
 
-    for optional_column in ["seller_category", "hour_of_day", "is_peak_hour"]:
+    for optional_column in [
+        "seller_category",
+        "hour_of_day",
+        "is_peak_hour",
+        "trip_distance_km",
+    ]:
         if optional_column in df.columns:
             interval_df[optional_column] = df[optional_column].to_numpy()
 
@@ -171,12 +185,10 @@ def generate_interval_predictions(
 
 
 def compute_interval_metrics(
-    actual: pd.Series, interval_df: pd.DataFrame
+    actual: pd.Series, interval_df: pd.DataFrame, quantiles: list[float]
 ) -> dict[str, float]:
     """Compute interval-quality and quantile-calibration metrics."""
     actual_array = actual.to_numpy()
-    pred_q50 = interval_df["pred_q50"].to_numpy()
-    pred_q90 = interval_df["pred_q90"].to_numpy()
 
     metrics = {
         "coverage_q50_q90": round(float(interval_df["is_within_interval"].mean()), 6),
@@ -184,15 +196,18 @@ def compute_interval_metrics(
             float(interval_df["interval_width"].mean()), 6
         ),
         "late_rate_vs_q90": round(float(interval_df["is_late_vs_upper"].mean()), 6),
-        "pinball_loss_q50": round(
-            float(mean_pinball_loss(actual_array, pred_q50, alpha=0.5)), 6
-        ),
-        "pinball_loss_q90": round(
-            float(mean_pinball_loss(actual_array, pred_q90, alpha=0.9)), 6
-        ),
-        "calibration_q50": round(float(np.mean(actual_array <= pred_q50)), 6),
-        "calibration_q90": round(float(np.mean(actual_array <= pred_q90)), 6),
     }
+
+    for quantile in quantiles:
+        prediction_column = f"pred_{quantile_label(quantile)}"
+        predictions = interval_df[prediction_column].to_numpy()
+        metrics[f"pinball_loss_{quantile_label(quantile)}"] = round(
+            float(mean_pinball_loss(actual_array, predictions, alpha=quantile)), 6
+        )
+        metrics[f"calibration_{quantile_label(quantile)}"] = round(
+            float(np.mean(actual_array <= predictions)), 6
+        )
+
     return metrics
 
 
@@ -208,8 +223,8 @@ def save_artifacts(
     artifacts_dir = Path(config["artifacts"]["quantile_model_dir"])
     artifacts_dir.mkdir(parents=True, exist_ok=True)
 
-    joblib.dump(models[0.5], artifacts_dir / "q50_model.pkl")
-    joblib.dump(models[0.9], artifacts_dir / "q90_model.pkl")
+    for quantile, model in models.items():
+        joblib.dump(model, artifacts_dir / f"{quantile_label(quantile)}_model.pkl")
     (artifacts_dir / "metrics.json").write_text(
         json.dumps(metrics, indent=2), encoding="utf-8"
     )
@@ -217,18 +232,17 @@ def save_artifacts(
     test_predictions.to_csv(
         artifacts_dir / "interval_predictions_test.csv", index=False
     )
-    feature_importances[0.5].to_csv(
-        artifacts_dir / "feature_importance_q50.csv", index=False
-    )
-    feature_importances[0.9].to_csv(
-        artifacts_dir / "feature_importance_q90.csv", index=False
-    )
+    for quantile, importance_df in feature_importances.items():
+        importance_df.to_csv(
+            artifacts_dir / f"feature_importance_{quantile_label(quantile)}.csv",
+            index=False,
+        )
 
     return artifacts_dir
 
 
 def main() -> None:
-    """Train q50 and q90 models and save interval artifacts."""
+    """Train configured quantile models and save interval artifacts."""
     print("Running quantile-model training pipeline.")
     config = load_config("config/model_config.yaml")
     validate_config(config)
@@ -255,6 +269,7 @@ def main() -> None:
     y_val = val_df[target_column]
     x_test = test_df[feature_columns]
     y_test = test_df[target_column]
+    quantiles = sorted(config["quantiles"])
 
     print("Training quantile models.")
     models = fit_quantile_models(
@@ -281,8 +296,8 @@ def main() -> None:
     )
 
     metrics = {
-        "validation": compute_interval_metrics(y_val, val_predictions),
-        "test": compute_interval_metrics(y_test, test_predictions),
+        "validation": compute_interval_metrics(y_val, val_predictions, quantiles),
+        "test": compute_interval_metrics(y_test, test_predictions, quantiles),
         "quantile_crossing_corrections": {
             "validation": val_crossing_corrections,
             "test": test_crossing_corrections,
@@ -290,8 +305,7 @@ def main() -> None:
     }
 
     feature_importances = {
-        0.5: extract_feature_importance(models[0.5]),
-        0.9: extract_feature_importance(models[0.9]),
+        quantile: extract_feature_importance(models[quantile]) for quantile in quantiles
     }
 
     artifacts_dir = save_artifacts(
@@ -309,7 +323,7 @@ def main() -> None:
     print(f"Test rows: {len(test_df)}")
     print(f"Resolved numeric features: {numeric_columns}")
     print(f"Resolved categorical features: {categorical_columns}")
-    print(f"Trained quantiles: {REQUIRED_QUANTILES}")
+    print(f"Trained quantiles: {quantiles}")
     print(f"Validation coverage: {metrics['validation']['coverage_q50_q90']}")
     print(
         "Validation interval width: "
