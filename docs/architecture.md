@@ -1,4 +1,4 @@
-# Architecture Narrative
+# Architecture
 
 ## 1. Purpose of the Architecture
 This document explains how the prototype implemented in this repository could fit into a broader production delivery-promise system. The code in the repository is intentionally narrow: it implements a proxy dataset, point and quantile prediction models, and offline policy comparison.
@@ -70,7 +70,9 @@ In a production environment, a delivery-promise request could follow a sequence 
 
 This separation is important. The model predicts uncertainty, for example by returning quantiles such as `q10`, `q50`, `q90`, and `q95`. The policy layer then decides what to show the buyer, such as a narrower or wider interval depending on reliability goals. In other words, prediction and decision policy are related but distinct production responsibilities.
 
-Latency matters in practice because the promise often needs to be returned during browsing or checkout, but the main design point here is conceptual rather than infrastructural: online serving needs a fast path from feature assembly to quantile prediction to policy selection and then to product display.
+Latency matters in practice because delivery promises are often shown during browsing or checkout, so the prediction path must execute within tens of milliseconds. This constraint typically favors compact models and simple feature assembly rather than heavy simulation or optimization logic.
+
+In production systems, it is important that feature definitions remain consistent between training and inference to avoid training–serving skew, where the model receives inputs that differ from the distributions used during training.
 
 ## 7. Policy Layer in Production
 A quantile model alone does not decide what promise the buyer should see. The policy layer determines how the predicted uncertainty is operationalized. In a production setting, that decision might depend on service-level objectives, seller reliability, customer experience goals, regional constraints, and marketplace strategy.
@@ -134,4 +136,4 @@ Several elements are intentionally out of scope for this repository:
 These omissions are deliberate rather than accidental. The prototype is designed to focus on one coherent problem slice: uncertainty-aware prediction and policy evaluation for delivery promises.
 
 ## 13. Conclusion
-This repository implements the core predictive and policy logic of a delivery-promise system in prototype form. The surrounding architecture narrative shows how that logic could connect to a realistic production marketplace environment, while keeping a clear distinction between what is implemented here and what a full operational system would require.
+This repository implements a prototype of the predictive and policy core of a delivery-promise system. The architecture narrative explains how that core would integrate into a full marketplace logistics platform while keeping a clear distinction between prototype scope and production requirements.

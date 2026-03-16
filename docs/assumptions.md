@@ -15,6 +15,8 @@ The policy layer assumes that buyer-facing promises can be approximated using fi
 
 The prototype intentionally ignores richer utility formulations such as explicit conversion elasticity, long-term trust effects, or segment-specific business value. Those could matter in production, but they are outside the scope of a lightweight challenge implementation.
 
+Buyer perception may also depend on how early deliveries are communicated. If many orders arrive before the promised window begins, the experience may feel inconsistent even if the delivery is technically early.
+
 ## 4. Production Simplifications
 The repository excludes several important production components:
 
@@ -29,9 +31,9 @@ The repository excludes several important production components:
 These simplifications are deliberate. The implementation focuses on the predictive and policy core rather than trying to reproduce a full logistics platform.
 
 ## 5. Risk of Assumptions
-These assumptions could fail in several ways. Synthetic preparation and pickup-delay variables may not match real seller behavior or operational coordination patterns. Public urban trip-duration data may differ materially from actual marketplace delivery flows, especially if the network uses different courier behaviors, hub structures, or service areas.
+These assumptions could fail in several ways. Synthetic preparation and pickup-delay variables may not match real seller behavior or operational coordination patterns. Public urban trip-duration data may differ materially from actual marketplace delivery flows, especially if the network uses different courier behaviors, hub structures, or service areas. Demand surges during peak periods such as lunch or evening hours may also change courier availability and pickup queues in ways that are difficult to capture with static models trained on historical data.
 
-Model calibration on proxy data may not transfer to production. In particular, upper quantiles that look reasonable offline may become miscalibrated when faced with real operational shocks, seller changes, or demand surges. Policy conclusions may also shift if business objectives include factors that are absent from this prototype, such as conversion sensitivity or customer frustration from overly wide windows.
+Model calibration on proxy data may not transfer to production. In particular, upper quantiles that look reasonable offline may become miscalibrated when faced with real operational shocks or changes in seller behavior. Policy conclusions may also shift if business objectives include factors that are absent from this prototype, such as conversion sensitivity or customer frustration from overly wide windows.
 
 Being explicit about these risks is important. The prototype is meant to demonstrate sound framing and method selection, not to claim production validity from proxy data alone.
 
