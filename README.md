@@ -41,6 +41,7 @@ flowchart LR
     B --> C[Quantile Model]
     C --> D[Policy Layer]
     D --> E[Buyer Promise]
+```
 
 ## Dataset Strategy
 The challenge does not provide operational marketplace data, so the project uses a hybrid proxy dataset design.
