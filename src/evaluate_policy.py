@@ -243,6 +243,7 @@ def create_tradeoff_plot(metrics_df: pd.DataFrame, config: dict[str, Any], outpu
     ax.set_title("Policy Trade-off: Interval Width vs Late Delivery Rate")
     ax.set_xlabel("Average interval width")
     ax.set_ylabel("Late delivery rate")
+    ax.grid(True, alpha=0.3)
 
     if plot_config.get("annotate_points", True):
         for _, row in metrics_df.iterrows():

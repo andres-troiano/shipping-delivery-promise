@@ -33,6 +33,15 @@ prep_time
 
 This separation between prediction and policy is the main design idea of the project. The model estimates uncertainty. The policy layer decides how that uncertainty should be exposed to the buyer.
 
+## System Overview
+
+```mermaid
+flowchart LR
+    A[Order Context] --> B[Feature Assembly]
+    B --> C[Quantile Model]
+    C --> D[Policy Layer]
+    D --> E[Buyer Promise]
+
 ## Dataset Strategy
 The challenge does not provide operational marketplace data, so the project uses a hybrid proxy dataset design.
 
@@ -83,6 +92,24 @@ Each policy trades off:
 
 This is the core decision layer of the prototype: the same predictive model can support more aggressive or more conservative promise strategies.
 
+## Evaluation Metrics
+
+Policies are compared using operationally interpretable metrics:
+
+• **Late delivery rate**  
+  `P(T > promise_end)`
+
+• **Interval width**  
+  `promise_end − promise_start`
+
+• **Coverage**  
+  `P(promise_start ≤ T ≤ promise_end)`
+
+• **Early-before-start rate**  
+  `P(T < promise_start)`
+
+These metrics capture the trade-off between operational reliability and buyer-facing precision.
+
 ## Key Result
 The central result of the project is a policy trade-off plot where:
 
@@ -90,6 +117,8 @@ The central result of the project is a policy trade-off plot where:
 x-axis: average interval width
 y-axis: late delivery rate
 ```
+
+![Policy Trade-off](artifacts/policy_analysis/tradeoff_plot_val.png)
 
 Each point is a different promise policy. Narrower intervals are more attractive from a customer-experience perspective, while wider intervals reduce the probability of missing the promised deadline.
 
