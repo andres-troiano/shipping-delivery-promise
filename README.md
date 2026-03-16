@@ -119,7 +119,9 @@ x-axis: average interval width
 y-axis: late delivery rate
 ```
 
-![Policy Trade-off](artifacts/policy_analysis/tradeoff_plot_val.png)
+<p align="center">
+  <img src="artifacts/policy_analysis/tradeoff_plot_val.png" width="500">
+</p>
 
 Each point is a different promise policy. Narrower intervals are more attractive from a customer-experience perspective, while wider intervals reduce the probability of missing the promised deadline.
 
