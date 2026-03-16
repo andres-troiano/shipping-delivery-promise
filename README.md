@@ -60,6 +60,18 @@ prep_time_minutes
 
 The synthetic components are explicit and configurable, which makes the prototype easier to inspect and reason about.
 
+## Dataset Summary
+Based on the current generated Stage 2 dataset:
+
+```text
+Dataset size: 100,000 rows
+Splits: 70,000 train / 15,000 validation / 15,000 test
+Processed columns: 23
+Model features used in Stage 3/4: 17
+Target: lead_time_minutes
+Split strategy: time-aware
+```
+
 ## Modeling Approach
 ### Point prediction model
 The baseline point model uses `LightGBMRegressor` to estimate expected lead time. Its role is to confirm that the proxy dataset contains learnable signal and to provide a benchmark against simpler baselines.
