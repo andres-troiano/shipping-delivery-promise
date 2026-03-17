@@ -2,7 +2,9 @@
 
 In a marketplace logistics platform, the buyer is presented with a delivery promise such as:
 
-- “Delivery today between 16:00 and 20:00.”
+```text
+“Delivery today between 16:00 and 20:00.”
+```
 
 This promise plays a central role in the product experience. It directly influences conversion by shaping user expectations at checkout, and it affects trust by setting a clear commitment about when the order will arrive. When the promise is accurate and precise, it improves perceived reliability and convenience. When it fails, it leads to dissatisfaction, support interactions, and potential compensations.
 
@@ -14,21 +16,63 @@ For this reason, the problem is not simply to predict delivery time. The core pr
 
 ## 2. Problem Statement
 
-For each order, the system observes a set of features available at checkout, such as the locations of the buyer and seller, the seller category, the time of day, and proxy variables related to distance or routing.
+For each order, the system observes a set of features available at checkout, such as buyer and seller location, seller category, time of day, and proxy variables related to distance or routing.
 
-Let T denote the actual delivery lead time, which is unknown at prediction time, and let X denote the observed features. The goal is to output a delivery promise interval defined by a start time and an end time, which will be shown to the user.
+Let:
 
-The system must therefore implement a function that maps the observed features to a promise interval. This interval should satisfy two competing objectives: it should be reliable, in the sense that deliveries rarely occur after the promised end time, and it should be informative, in the sense that the interval is not unnecessarily wide.
+* T = actual delivery lead time (unknown at checkout)
+* X = observed features
+
+The system must output a promise interval:
+
+```text
+[start_time, end_time] = π(X)
+```
+
+where π is a policy that maps order features to a delivery promise.
+
+The goal is to design π such that the promise is:
+
+* reliable: deliveries rarely occur after the promised end time
+* informative: the interval is not unnecessarily wide
 
 ## 3. Prediction and Decision Layers
 
-This problem naturally decomposes into two distinct layers: a prediction layer and a decision layer.
+This problem naturally decomposes into two layers: a prediction layer and a decision (policy) layer.
 
-The prediction layer is responsible for estimating the uncertainty in delivery time given the observed features. Instead of predicting a single point estimate, the system models the distribution of possible delivery times. In this prototype, this is done using quantile regression, which provides estimates of different percentiles of the delivery time distribution, such as the 10th, 50th, 90th, or 95th percentiles. These quantiles provide a practical way to represent uncertainty without assuming a specific parametric distribution.
+### Prediction Layer
 
-The decision layer, or policy layer, takes these predicted quantiles and transforms them into a delivery promise. For example, the system may choose to use a lower quantile as the start of the interval and an upper quantile as the end. Different choices of quantiles correspond to different policies. A conservative policy will produce wider intervals with lower risk of late deliveries, while an aggressive policy will produce narrower intervals at the cost of higher risk.
+The prediction layer estimates the uncertainty of delivery time given the observed features. Instead of predicting a single value, the system models the distribution of possible delivery times.
 
-This separation between prediction and decision is critical. The model is responsible for estimating uncertainty as accurately as possible, while the policy encodes the business trade-offs between reliability and user experience.
+In this prototype, this is done using quantile regression, producing estimates such as:
+
+* lower quantiles (e.g. q10 or q25)
+* median (q50)
+* upper quantiles (e.g. q90 or q95)
+
+These quantiles provide a practical representation of uncertainty without assuming a specific distribution.
+
+### Decision (Policy) Layer
+
+The policy layer transforms predicted quantiles into a delivery promise.
+
+A simple policy can be expressed as:
+
+```text
+[start_time, end_time] = [q_low(X), q_high(X)]
+```
+
+Different choices of quantiles define different policies:
+
+* Conservative: wider intervals, lower late risk
+* Balanced: moderate trade-off
+* Aggressive: narrower intervals, higher risk
+
+The key separation is:
+
+```text
+The model estimates uncertainty, while the policy encodes business trade-offs.
+```
 
 ## 4. Objective and Trade-offs
 
@@ -42,23 +86,33 @@ Third, the width of the interval determines how informative the promise is. Narr
 
 Conceptually, the goal is to minimize late deliveries while keeping the interval as narrow as possible. In practice, this trade-off is often handled through constraints rather than explicit cost functions. A common approach is to enforce a maximum acceptable late delivery rate, and within that constraint, optimize for the narrowest possible intervals.
 
+For example, the system may aim to keep late deliveries below 10%, while making intervals as narrow as possible within that constraint.
+
+This reflects a typical business goal: maintain **reliability guarantees** while maximizing **promise precision**.
+
 ## 5. Evaluation Metrics
 
 To evaluate the system, we consider three key metrics.
 
-The most important metric is the late delivery rate, defined as the fraction of orders delivered after the promised end time. This is the primary operational KPI because it directly reflects reliability and customer impact.
+### 1. Late Delivery Rate
+Defined as the fraction of orders delivered after the promised end time. This is the primary operational KPI because it directly reflects reliability and customer impact.
 
-The second metric is the average interval width, which measures how informative the promise is. Smaller widths correspond to better user experience, as they provide more precise expectations.
+### 2. Average Interval Width
+Measures how informative the promise is. Smaller widths correspond to better user experience, as they provide more precise expectations.
 
-The third metric is coverage, defined as the fraction of deliveries that fall within the promised interval. This metric is useful for assessing whether the predicted intervals are well calibrated, although it is secondary to the late delivery rate from a business perspective.
+### 3. Coverage
+Defined as the fraction of deliveries that fall within the promised interval. This metric is useful for assessing whether the predicted intervals are well calibrated, although it is secondary to the late delivery rate from a business perspective.
 
 ## 6. Seller Preparation Timing
 
-In real marketplace systems, the platform may also control when the seller is notified to begin preparing the order. This introduces an additional decision layer that interacts with the delivery promise.
+In real marketplace systems, the platform may also control when the seller is notified to begin preparing the order.
 
-Triggering preparation earlier can reduce the risk of delays, but may lead to inefficiencies such as idle courier time. Triggering it later can improve operational efficiency, but increases the risk of missing the promised window.
+This introduces a **second decision layer**:
 
-In this prototype, seller preparation is treated as part of the stochastic delivery time. However, in a production system, it could be modeled explicitly and jointly optimized with the delivery promise.
+* triggering preparation earlier reduces delivery risk but may create inefficiencies
+* triggering it later improves efficiency but increases the risk of delays
+
+In this prototype, preparation time is treated as part of the stochastic delivery process. In a production system, it could be explicitly modeled and jointly optimized with the delivery promise.
 
 ## 7. Key Challenges
 
@@ -66,6 +120,17 @@ Several factors make this problem challenging in practice. Delivery time is a st
 
 ## 8. Scope of the Prototype
 
-This prototype focuses on modeling delivery uncertainty using quantile regression, defining interval-based promise policies, and evaluating the trade-offs between reliability and precision.
+This prototype focuses on:
 
-It does not attempt to model customer conversion effects, dynamic courier assignment, real-time routing, or the explicit optimization of seller-side decisions. These aspects are important in production systems but are outside the scope of this simplified implementation.
+* modeling delivery uncertainty using quantile regression
+* defining interval-based promise policies
+* evaluating trade-offs between reliability and precision
+
+It does not include:
+
+* customer conversion modeling
+* dynamic courier assignment or routing
+* real-time dispatch optimization
+* explicit optimization of seller-side decisions
+
+These aspects are important in a full production system but are outside the scope of this simplified implementation.
