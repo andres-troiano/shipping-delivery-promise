@@ -103,7 +103,19 @@ Measures how informative the promise is. Smaller widths correspond to better use
 ### 3. Coverage
 Defined as the fraction of deliveries that fall within the promised interval. This metric is useful for assessing whether the predicted intervals are well calibrated, although it is secondary to the late delivery rate from a business perspective.
 
-## 6. Seller Preparation Timing
+## 6. Primary Business KPI
+
+The most important KPI for this system is the **late delivery rate**, defined as the percentage of orders delivered after the promised end time.
+
+This metric directly affects:
+
+- customer satisfaction
+- operational cost (refunds, support)
+- trust in the platform
+
+Other metrics, such as interval width and coverage, are optimized subject to maintaining acceptable levels of late deliveries.
+
+## 7. Seller Preparation Timing
 
 In real marketplace systems, the platform may also control when the seller is notified to begin preparing the order.
 
@@ -114,11 +126,11 @@ This introduces a **second decision layer**:
 
 In this prototype, preparation time is treated as part of the stochastic delivery process. In a production system, it could be explicitly modeled and jointly optimized with the delivery promise.
 
-## 7. Key Challenges
+## 8. Key Challenges
 
 Several factors make this problem challenging in practice. Delivery time is a stochastic process composed of multiple stages, some of which may not be directly observed, such as seller preparation time. Different seller categories exhibit very different behaviors, leading to heterogeneous distributions. The system must operate in real time at checkout, which imposes latency constraints. Finally, the trade-offs involved are driven by business considerations, not purely by predictive accuracy.
 
-## 8. Scope of the Prototype
+## 9. Scope of the Prototype
 
 This prototype focuses on:
 
@@ -134,3 +146,18 @@ It does not include:
 * explicit optimization of seller-side decisions
 
 These aspects are important in a full production system but are outside the scope of this simplified implementation.
+
+## 10. Alternative Approaches
+
+While this prototype uses quantile regression and rule-based policies, several alternative approaches could be considered in a production system.
+
+These include:
+
+- Probabilistic models that estimate full predictive distributions (NGBoost, distributional regression, Bayesian regression)
+- Conformal prediction to produce calibrated intervals with statistical guarantees, independent of the underlying model
+- Simulation-based logistics models to explicitly model system dynamics such as preparation, pickup, and delivery stages
+- Reinforcement learning to directly optimize decision policies under uncertainty, potentially incorporating long-term operational effects
+- Constrained optimization: the problem can be formulated as minimizing interval width subject to a constraint on late delivery rate. This provides a clean theoretical framework, but in practice requires defining differentiable objectives and reliable calibration.
+- Cost-based optimization: define an explicit business loss function that penalizes late deliveries and wide intervals. This approach depends on estimating business costs, which may be difficult in practice.
+
+These approaches differ in complexity, interpretability, and operational requirements, and may be more suitable depending on data availability and system constraints.
