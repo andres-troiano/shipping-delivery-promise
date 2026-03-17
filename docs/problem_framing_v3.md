@@ -34,18 +34,18 @@ For each order $i$, the system must output a delivery promise interval:
 where:
 
 - $a_i$: promised start time (minutes from checkout)
-- \( b_i \): promised end time  
+- $b_i$: promised end time  
 
 Let:
 
-\[
-T_i = \text{actual delivery lead time (minutes)}
-\]
+```text
+T_i = actual delivery lead time (minutes)
+```
 
-The system must choose \( [a_i, b_i] \) such that it balances:
+The system must choose $[a_i, b_i]$ such that it balances:
 
-- Reliability: low probability of late delivery \( (T_i > b_i) \)
-- Precision: small interval width \( (b_i - a_i) \)
+- Reliability: low probability of late delivery (T_i > b_i)
+- Precision: small interval width (b_i - a_i)
 
 ## 3. Inputs, Outputs, and Relevant Variables
 
