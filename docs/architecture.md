@@ -1,139 +1,266 @@
-# Architecture
+# System Architecture
 
-## 1. Purpose of the Architecture
-This document explains how the prototype implemented in this repository could fit into a broader production delivery-promise system. The code in the repository is intentionally narrow: it implements a proxy dataset, point and quantile prediction models, and offline policy comparison.
+## 1. Overview
 
-The architecture described here is conceptual rather than deployed. Its purpose is to demonstrate system thinking around how a marketplace logistics platform could operationalize prediction and policy logic, not to claim a full production implementation.
+The delivery promise system operates as an end-to-end pipeline that transforms raw operational data into a buyer-facing delivery interval.
 
-## 2. System Goal
-A marketplace or logistics platform needs to show the buyer a delivery promise such as "Today between 16:00 and 20:00." Producing that promise reliably requires combining information from seller operations, order context, courier and logistics state, geographic conditions, and current demand pressure.
+The architecture is composed of two main layers:
 
-The production goal is not only to estimate how long delivery might take. The system must convert uncertain operational outcomes into a buyer-facing interval that balances customer experience against operational reliability. That is the same business problem defined in the Stage 0 framing, now viewed from a system-design perspective.
+- Offline pipeline: data processing, feature engineering, model training
+- Online pipeline: real-time inference and policy decision
 
-## 3. High-Level Architecture Overview
-At a high level, a production system of this type would include six conceptual layers:
+This separation ensures:
 
-1. data sources that capture seller, order, logistics, temporal, and geographic signals
-2. feature or signal preparation that assembles a prediction-ready view of the current order context
-3. a prediction layer that estimates lead-time point forecasts and quantiles
-4. a policy layer that converts uncertainty into a buyer-facing promise interval
-5. a serving layer that returns the promise to the product surface with low enough latency for checkout or browsing
-6. monitoring and feedback loops that track operational outcomes and feed future retraining and policy adjustments
+- scalability
+- reproducibility
+- low-latency predictions
 
-This repository implements a prototype of the predictive and policy core. A real production system would require upstream operational data integration, online feature assembly, monitoring, retraining processes, and fallback behavior that are described here conceptually but not built in code.
+## 2. High-Level Flow
 
-```mermaid
-flowchart LR
-    A[Data Sources] --> B[Feature Assembly]
-    B --> C[Quantile Model]
-    C --> D[Policy Layer]
-    D --> E[Buyer Promise]
-    E --> F[Observed Delivery Outcome]
-    F --> G[Monitoring and Feedback]
-    G --> B
-    G --> C
-```
+### Offline
 
-## 4. Data Sources
-In production, the system would likely consume several groups of upstream signals.
+Raw data → Feature engineering → Training → Model registry
 
-### Seller-side signals
-Relevant seller-side inputs include historical preparation times, SLA performance, seller category, warehouse or store location, and current backlog or operational load. These help explain whether an order is likely to be prepared quickly or slowly and how much seller-specific uncertainty is present.
+### Online
 
-### Order-level signals
-Useful order inputs include item category, basket size or order complexity, special handling requirements, and fulfillment type. These signals affect both average processing time and the likelihood of long-tail delays.
+Checkout request → Feature retrieval → Model inference → Policy → Promise
 
-### Logistics and courier signals
-The serving system would ideally incorporate courier availability, pickup queue state, local network congestion, and routing or hub information. These signals are especially important for estimating pickup delay and delivery-time risk under current operating conditions.
+## 3. Offline Pipeline
 
-### Temporal and geographic signals
-Time-of-day, day-of-week, holidays, events, pickup and delivery zones, and distance or travel-time estimates all influence lead time. They provide structure for repeated demand and congestion patterns across the network.
+The offline pipeline is responsible for building and maintaining the predictive models.
 
-The prototype only approximates a subset of this landscape. It uses a hybrid proxy dataset in which transport duration is represented by public taxi-trip data and seller-side behavior is synthetically generated. That simplification is deliberate: it isolates the predictive and policy problem without claiming to replicate full marketplace operations.
+### 3.1 Data Sources
 
-## 5. Offline Training Layer
-The prototype's training scripts map naturally to a conceptual offline training workflow. In production, historical order outcomes would be collected from operational systems, joined with seller, logistics, and temporal features, and assembled into a training dataset with consistent feature definitions.
+Data is collected from multiple systems:
 
-That offline process would include time-aware train, validation, and test splits; point-model training for baseline estimation; quantile-model training for interval prediction; and offline policy evaluation to understand the trade-off between narrow promises and late deliveries. Before a model or policy update is promoted, the system would compare it against previous versions using recent backtests and reliability diagnostics.
+- order events (checkout, delivery)
+- seller data (category, performance)
+- courier events (pickup, delivery)
+- geographic and temporal signals
 
-In this repository, those responsibilities are represented locally by `src/build_dataset.py`, `src/train_model.py`, `src/train_quantiles.py`, and `src/evaluate_policy.py`. The production equivalents would likely run on a schedule, register versioned artifacts, and enforce stronger training-inference consistency guarantees, but the core conceptual steps are already visible in the prototype.
+### 3.2 Feature Engineering
 
-## 6. Online Inference / Serving Flow
-In a production environment, a delivery-promise request could follow a sequence like this:
+Features are constructed from raw data:
 
-1. a buyer loads a product or checkout page
-2. the system gathers current order, seller, and logistics context
-3. a feature service assembles the prediction-ready feature vector
-4. the quantile prediction model estimates lead-time quantiles
-5. the policy layer transforms those quantiles into a buyer-visible interval
-6. the frontend displays the promise
+- aggregation (historical prep times)
+- temporal features (hour, weekday)
+- geographic features (distance proxies)
+- operational indicators (load, delays)
 
-This separation is important. The model predicts uncertainty, for example by returning quantiles such as `q10`, `q50`, `q90`, and `q95`. The policy layer then decides what to show the buyer, such as a narrower or wider interval depending on reliability goals. In other words, prediction and decision policy are related but distinct production responsibilities.
+These features are stored in a feature store for reuse.
 
-Latency matters in practice because delivery promises are often shown during browsing or checkout, so the prediction path must execute within tens of milliseconds. This constraint typically favors compact models and simple feature assembly rather than heavy simulation or optimization logic.
+### 3.3 Model Training
 
-In production systems, it is important that feature definitions remain consistent between training and inference to avoid training–serving skew, where the model receives inputs that differ from the distributions used during training.
+Models are trained using historical data:
 
-## 7. Policy Layer in Production
-A quantile model alone does not decide what promise the buyer should see. The policy layer determines how the predicted uncertainty is operationalized. In a production setting, that decision might depend on service-level objectives, seller reliability, customer experience goals, regional constraints, and marketplace strategy.
+- point prediction model (baseline)
+- quantile models (primary)
 
-For example, an unreliable seller or high-risk region might require a more conservative interval. A consistently fast and predictable seller category could support a narrower promise. Peak periods may justify switching to safer policies to avoid a spike in late deliveries.
+Training includes:
 
-The key design idea is that the ML model estimates uncertainty, while the policy layer chooses how aggressively or conservatively to expose that uncertainty to the buyer. This repository's Stage 5 policy evaluation script is a prototype of that decision layer, but only in offline analysis form.
+- time-based validation
+- hyperparameter tuning
+- evaluation on holdout data
 
-## 8. Monitoring and Feedback
-A real system would need monitoring across operational, modeling, and business dimensions.
+### 3.4 Model Registry
 
-### Operational monitoring
-Important operational signals include late-delivery rate, promise-hit rate, interval-width trends, and SLA compliance by region or seller segment. These metrics tell the business whether promises are both safe and useful.
+Trained models are versioned and stored in a registry:
 
-### Model monitoring
-The prediction stack would also need calibration and drift monitoring. Relevant checks include prediction-error drift, upper-quantile calibration, feature missingness, and distribution shifts in major drivers such as seller behavior, demand timing, or trip distance.
+- model artifacts
+- training configuration
+- evaluation metrics
 
-### Business monitoring
-From a product perspective, the system would ideally be observed alongside checkout conversion, cancellation rate, and customer satisfaction or complaint signals. A promise policy that is operationally safe but commercially weak is still suboptimal.
+This enables:
 
-None of these monitoring components are implemented in the repository. They are omitted intentionally, but they are critical for any production deployment of this kind.
+- reproducibility
+- rollback
+- controlled deployment
 
-## 9. Retraining and Model Lifecycle
-Production models would evolve over time rather than remain static. A realistic lifecycle would include periodic retraining on recent data, time-aware validation to reduce leakage, backtesting before promotion, model versioning, and rollback to a previous stable model or policy if performance deteriorates.
+## 4. Online Pipeline
 
-The specific tooling is not the important part here. The important point is that a delivery-promise system needs explicit lifecycle management because seller behavior, operational conditions, and demand patterns all change over time.
+The online pipeline generates delivery promises in real time during checkout.
 
-## 10. Failure Modes and Safeguards
-Several production failure modes are plausible. Upstream features may be missing or stale. Seller behavior may shift quickly. Demand surges can change the distribution of delays. Quantile calibration may drift, especially in the upper tail. A business team could also deploy an overly aggressive policy that narrows windows too far and increases late deliveries.
+### 4.1 Request Flow
 
-Lightweight safeguards would therefore be important. Examples include conservative default intervals when features are incomplete, minimum and maximum allowed promise widths, degraded-mode heuristics, monitoring alerts for late-rate spikes, and the ability to roll back to a safer policy or previous model version. These safeguards are not implemented in the repo, but they are realistic extensions of the policy and monitoring logic the prototype is designed to explore.
+1. User initiates checkout
+2. System gathers available features
+3. Model predicts lead time quantiles
+4. Policy layer generates interval
+5. Interval is returned to the frontend
 
-## 11. Mapping Prototype Components to Production
-The repository artifacts map to production roles as follows:
+### 4.2 Feature Retrieval
 
-* `src/build_dataset.py` -> offline dataset assembly prototype
-* `src/train_model.py` -> offline point-model training baseline
-* `src/train_quantiles.py` -> offline uncertainty-estimation prototype
-* `src/evaluate_policy.py` -> offline policy comparison prototype
-* `artifacts/point_model/` -> versioned baseline-model outputs
-* `artifacts/quantile_model/` -> versioned quantile-model outputs
-* `artifacts/policy_analysis/` -> offline decision-policy evaluation outputs
-* `docs/problem_framing.md` -> business framing and predictive-versus-policy decomposition
-* `docs/architecture.md` -> conceptual production system narrative
-* `docs/assumptions.md` -> explicit prototype assumptions and their risks
+Features are retrieved from:
 
-This mapping makes the intended scope clear: the code implements a core slice of the system, while the documentation explains where that slice would sit in a broader platform.
+- real-time systems (order context)
+- feature store (historical aggregates)
 
-## 12. Scope Boundaries
-Several elements are intentionally out of scope for this repository:
+Latency constraints require:
 
-* real-time feature storage and streaming infrastructure
-* dispatch or routing optimization
-* courier assignment logic
-* seller notification workflows
-* production API deployment
-* online experimentation or A/B testing infrastructure
-* production monitoring dashboards
-* automated retraining orchestration
+- fast lookup (low milliseconds)
+- precomputed features when possible
 
-These omissions are deliberate rather than accidental. The prototype is designed to focus on one coherent problem slice: uncertainty-aware prediction and policy evaluation for delivery promises.
+### 4.3 Model Inference
 
-## 13. Conclusion
-This repository implements a prototype of the predictive and policy core of a delivery-promise system. The architecture narrative explains how that core would integrate into a full marketplace logistics platform while keeping a clear distinction between prototype scope and production requirements.
+The model predicts:
+
+- $Q_{10}$, $Q_{25}$, $Q_{50}$, $Q_{80}$, $Q_{90}$, $Q_{95}$
+
+Inference must be:
+
+- low latency (tens of milliseconds)
+- horizontally scalable
+
+### 4.4 Policy Layer
+
+The policy converts predictions into:
+
+$[a_i, b_i]$
+
+This layer is:
+
+- lightweight
+- configurable
+- independent from model training
+
+## 5. Scalability Considerations
+
+The system must handle high request volumes during peak traffic.
+
+Key strategies:
+
+- stateless inference services
+- horizontal scaling (autoscaling)
+- caching of frequent features
+- precomputation of heavy features
+
+## 6. Latency Constraints
+
+The system operates in a user-facing checkout flow, requiring:
+
+- low end-to-end latency
+- predictable response times
+
+Optimizations include:
+
+- efficient feature retrieval
+- lightweight models (e.g., tree-based)
+- avoiding complex simulations at inference time
+
+## 7. Versioning and Deployment
+
+### 7.1 Model Versioning
+
+Each model version includes:
+
+- training data snapshot
+- feature definitions
+- hyperparameters
+
+### 7.2 Deployment Strategy
+
+Deployment options:
+
+- batch rollout
+- canary deployment
+- A/B testing
+
+This allows safe iteration and evaluation.
+
+## 8. Monitoring
+
+Monitoring is critical to ensure system reliability.
+
+### 8.1 Operational Metrics
+
+- late delivery rate
+- early delivery rate
+- on-time rate
+
+### 8.2 Model Metrics
+
+- MAE / RMSE
+- calibration of quantiles
+- coverage
+
+### 8.3 Drift Detection
+
+Monitor:
+
+- feature distribution drift
+- target drift (lead time changes)
+
+Triggers:
+
+- model retraining
+- recalibration
+
+### 8.4 Alerting
+
+Alerts are triggered when:
+
+- late delivery rate exceeds threshold
+- coverage deviates from expected
+- system latency increases
+
+## 9. Retraining Strategy
+
+Models are retrained periodically:
+
+- scheduled retraining (e.g., daily / weekly)
+- triggered retraining (based on drift)
+
+Pipeline includes:
+
+- data ingestion
+- feature recomputation
+- model retraining
+- validation
+- deployment
+
+## 10. Design Choices and Trade-offs
+
+### Simplicity vs Accuracy
+
+- tree-based models chosen for speed and robustness
+- more complex models deferred
+
+### Precomputation vs Real-Time Features
+
+- precompute heavy features offline
+- compute lightweight features online
+
+### Prediction vs Decision Separation
+
+- model predicts uncertainty
+- policy defines business trade-offs
+
+This separation improves:
+
+- flexibility
+- maintainability
+
+## 11. Extensions
+
+Potential future improvements:
+
+- dynamic policy selection per order
+- integration with dispatch optimization
+- feedback loops from delivery outcomes
+- tighter integration with courier assignment systems
+
+## 12. Summary
+
+The architecture separates:
+
+- offline learning (data → model)
+- online decision-making (request → promise)
+
+This design ensures:
+
+- scalability
+- low latency
+- flexibility in policy control
+- robustness through monitoring and retraining
+
+and provides a realistic foundation for a production delivery promise system.
