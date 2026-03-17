@@ -194,7 +194,7 @@ mercado-envios-challenge/
 ├── docs/           # problem framing, modeling, assumptions, policy, and architecture narrative
 ├── notebooks/      # exploratory and presentation notebooks
 ├── data/           # local raw and processed data (not committed)
-├── artifacts/      # local trained models and outputs (not committed)
+├── artifacts/      # local trained models and outputs
 ├── tests/          # lightweight unit tests
 ├── README.md
 └── pyproject.toml
