@@ -36,7 +36,7 @@ Used as:
 
 $\hat{Q}_q(T_i \mid X_i)$
 
-for multiple quantiles $q \in \{0.10, 0.25, 0.50, 0.80, 0.90, 0.95\}$
+for multiple quantiles $q \in$ {0.10, 0.25, 0.50, 0.80, 0.90, 0.95}
 
 This enables:
 
