@@ -93,7 +93,7 @@ This simulates production conditions and avoids leakage.
 
 For quantile models, the pinball loss is used:
 
-![Lead time equation](assets/lead_time.png)
+![pinball loss](../assets/pb_loss.png)
 
 This directly optimizes quantile estimates.
 
