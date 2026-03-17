@@ -88,7 +88,23 @@ The online pipeline generates delivery promises in real time during checkout.
 4. Policy layer generates interval
 5. Interval is returned to the frontend
 
-### 4.2 Feature Retrieval
+### 4.2 Serving Interface
+
+The online pipeline exposes an inference interface (e.g., REST or gRPC) that is called during checkout.
+
+Input:
+- order attributes (items, category, location)
+- user location
+- timestamp
+- contextual signals
+
+Output:
+- delivery promise interval $[a_i, b_i]$
+- optional metadata (e.g., policy used, confidence)
+
+This interface must be stable, versioned, and low latency.
+
+### 4.3 Feature Retrieval
 
 Features are retrieved from:
 
@@ -100,7 +116,7 @@ Latency constraints require:
 - fast lookup (low milliseconds)
 - precomputed features when possible
 
-### 4.3 Model Inference
+### 4.4 Model Inference
 
 The model predicts:
 
@@ -111,7 +127,7 @@ Inference must be:
 - low latency (tens of milliseconds)
 - horizontally scalable
 
-### 4.4 Policy Layer
+### 4.5 Policy Layer
 
 The policy converts predictions into:
 
@@ -122,6 +138,20 @@ This layer is:
 - lightweight
 - configurable
 - independent from model training
+
+### 4.6 Failure Handling
+
+Potential failure modes:
+
+- feature store unavailable
+- model service timeout
+- unexpected input values
+
+Mitigation strategies:
+
+- fallback to default heuristic intervals
+- caching of recent predictions
+- graceful degradation in case of partial failures
 
 ## 5. Scalability Considerations
 
