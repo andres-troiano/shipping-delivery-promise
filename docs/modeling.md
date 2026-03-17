@@ -93,13 +93,7 @@ This simulates production conditions and avoids leakage.
 
 For quantile models, the pinball loss is used:
 
-\[
-L_q(y, \hat{y}) =
-\begin{cases}
-q (y - \hat{y}) & \text{if } y \geq \hat{y} \\
-(1 - q)(\hat{y} - y) & \text{if } y < \hat{y}
-\end{cases}
-\]
+![Lead time equation](assets/lead_time.png)
 
 This directly optimizes quantile estimates.
 
