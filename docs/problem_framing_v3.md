@@ -27,9 +27,7 @@ Therefore, the problem is not only predictive, but also decision-making under un
 
 For each order $i$, the system must output a delivery promise interval:
 
-```text
-[a_i, b_i]
-```
+$[a_i, b_i]$
 
 where:
 
@@ -38,14 +36,12 @@ where:
 
 Let:
 
-```text
-T_i = actual delivery lead time (minutes)
-```
+$T_i$ = actual delivery lead time (minutes)
 
 The system must choose $[a_i, b_i]$ such that it balances:
 
-- Reliability: low probability of late delivery (T_i > b_i)
-- Precision: small interval width (b_i - a_i)
+- Reliability: low probability of late delivery $(T_i > b_i)$
+- Precision: small interval width $(b_i - a_i)$
 
 ## 3. Inputs, Outputs, and Relevant Variables
 
