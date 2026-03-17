@@ -61,7 +61,6 @@ prep_time_minutes
 The synthetic components are explicit and configurable, which makes the prototype easier to inspect and reason about.
 
 ## Dataset Summary
-Based on the current generated Stage 2 dataset:
 
 ```text
 Dataset size: 100,000 rows
@@ -163,21 +162,7 @@ Directory roles:
 * `config/` -> reproducible configuration files
 * `docs/` -> business framing and production narrative
 * `notebooks/` -> result inspection and presentation
-* `tests/` -> focused validation of core dataset invariants
-
-## Project Stages
-```text
-Stage 0 — Problem framing
-Stage 1 — Repository scaffold
-Stage 2 — Proxy dataset construction
-Stage 3 — Lead time point prediction
-Stage 4 — Quantile interval prediction
-Stage 5 — Policy trade-off analysis
-Stage 6 — Architecture narrative
-Stage 7 — Final packaging
-```
-
-Only Stages 2–5 contain substantive implementation code. The other stages define the framing, repository structure, and documentation needed to make the prototype coherent and reviewable.
+* `tests/` -> focused validation of core dataset invariants 
 
 ## How to Run the Project
 Example workflow using a local virtual environment:

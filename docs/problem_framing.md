@@ -1,173 +1,250 @@
 # Problem Framing
 
 ## 1. Business Context
-In a marketplace logistics platform, the buyer is shown a delivery promise interval such as "Delivery today between 16:00 and 20:00." That promise is a core part of the product experience because it influences buyer trust, affects conversion, and sets a clear expectation for when the order should arrive.
 
-The platform must issue that promise before the delivery is completed, which means the promise is made under uncertainty. A narrow promise window is more attractive to buyers because it feels precise and convenient. A wide promise window is safer operationally because it reduces the chance that the delivery arrives after the promised end time.
+In a marketplace logistics platform such as Mercado Envíos, the buyer is shown a delivery promise interval during checkout:
 
-The promise is computed once during checkout and is not updated later during the delivery process, which means the system must commit to a promise before the operational outcome is fully known.
+```text
+"Delivery today between 16:00 and 20:00"
+```
 
-For that reason, the real business problem is not simply to predict delivery time. The problem is to choose a buyer-facing promise interval under uncertainty in a way that balances customer experience against operational reliability.
+This promise is a critical component of the user experience, as it directly impacts:
+
+- Conversion rate (narrower intervals are more attractive)
+- Customer satisfaction (late deliveries degrade trust)
+- Operational reliability (tight promises are harder to fulfill)
+
+The system must generate this promise before fulfillment begins, under uncertainty about multiple operational factors.
+
+This creates a fundamental trade-off:
+
+- Narrow intervals: better user experience, higher risk of late deliveries
+- Wide intervals: safer operationally, worse user experience
+
+Therefore, the problem is not only predictive, but also decision-making under uncertainty.
 
 ## 2. Problem Statement
-For each order, the system must estimate uncertainty in delivery lead time and transform that uncertainty into a promise interval shown to the buyer. The promise should balance reliability, by reducing late deliveries, with customer experience, by avoiding unnecessarily wide windows.
 
-This is therefore a decision problem informed by prediction rather than only a regression problem. Prediction estimates what is likely to happen. Policy determines what should be promised to the buyer given that uncertainty.
+For each order $i$, the system must output a delivery promise interval:
 
-## 3. Why This Problem Is Hard
-Delivery lead time depends on several uncertain processes that vary across orders and operating conditions. Seller preparation time may differ meaningfully between sellers and even between orders from the same seller. Pickup delays may change with courier availability or local congestion. Travel times vary with geography, route structure, traffic conditions, and time of day.
+$[a_i, b_i]$
 
-Additional variability comes from order complexity, day-of-week patterns, and local demand surges. These factors interact in nonlinear ways, and their impact is not constant across the distribution. Some orders may be easy to predict on average but still have substantial tail risk.
+where:
 
-Because of that, a single point estimate is not sufficient on its own. The system needs an uncertainty-aware view of lead time so it can choose a promise interval with an explicit reliability trade-off.
+- $a_i$: promised start time (minutes from checkout)
+- $b_i$: promised end time
 
-In addition, some operational events may not be directly observable in the available data (for example intermediate preparation milestones inside the seller workflow), which introduces additional uncertainty into the modeling process.
-
-## 4. Formal Problem Formulation
 Let:
 
-```text
-T_i = total lead time for order i
-X_i = feature vector for order i
-```
+$T_i$ = actual delivery lead time (minutes)
 
-For the prototype, total lead time is decomposed as:
+The system must choose $[a_i, b_i]$ such that it balances:
 
-```text
-T_i = prep_time_i + pickup_delay_i + delivery_duration_i
-```
+- Reliability: low probability of late delivery $(T_i > b_i)$
+- Precision: small interval width $(b_i - a_i)$
 
-The predictive objective is to estimate the conditional distribution:
+## 3. Inputs, Outputs, and Relevant Variables
 
-```text
-P(T_i | X_i)
-```
+The system can be formalized as a function:
 
-or, in practice, to estimate useful summaries of that distribution such as its mean or selected quantiles. Those summaries can then be used to construct delivery promise intervals for each order.
+$f: X_i \rightarrow [a_i, b_i]$
 
-## 5. Predictive Component vs Decision Component
-This prototype separates the problem into two linked but distinct components.
+### Inputs
 
-### Predictive component
-The predictive component estimates delivery lead time uncertainty conditional on the available order features. Its outputs may include a point estimate, a median, an upper quantile, or interval bounds derived from multiple quantiles.
+$X_i$
 
-The purpose of this layer is descriptive and probabilistic: given the order context, what outcomes are plausible, and how concentrated or dispersed is the lead time distribution?
+Represents all information available at checkout time, including:
 
-### Decision component
-The decision component converts predictive uncertainty into the buyer-facing promise shown in the product. For example, a policy may define:
+- seller characteristics
+- order attributes
+- temporal context (time of day, day of week)
+- geographic information
+- operational state (courier availability, system load)
 
-* lower bound = q50
-* upper bound = q90
+### Target Variable
 
-Under this policy, the promise interval is anchored around the median expected outcome and extended to a relatively conservative upper bound. If the business instead used `q50` to `q85`, the window would usually be narrower but the late-delivery risk would be higher. If it used `q50` to `q95`, the window would usually be wider but safer.
+$T_i$ = actual delivery lead time
 
-Using quantiles in this way allows the platform to control reliability explicitly. For example, choosing the 90th percentile as the promise end time implies that roughly 90% of deliveries are expected to arrive before the promised deadline under stable conditions.
+This is the variable to be predicted during training.
 
-This distinction is central to the repository:
+### Outputs
 
-* prediction estimates uncertainty
-* policy chooses how conservative the promise should be
+$[a_i, b_i]$
 
-## 6. Why Machine Learning Is Appropriate
-A fixed-rule system or simple heuristic can be a useful baseline, but it is unlikely to capture the full structure of the problem. Lead time depends on many interacting factors, including seller behavior, geography, timing, and operational load. These relationships are nonlinear and can vary across sellers, regions, and time periods.
+The delivery promise interval shown to the buyer, where:
 
-In addition, uncertainty is heteroscedastic: some orders are inherently more predictable than others. A model that can learn both central tendency and distributional differences across contexts is better suited to this setting than a one-size-fits-all rule.
+- $a_i$: start of the promise window
+- $b_i$: end of the promise window
 
-That said, the prototype does not assume that machine learning replaces all heuristics. Simple heuristics remain useful as baselines, sanity checks, and fallback policies.
+### Relevant Variables
 
-## 7. Target Variable and Features
-The main target variable for the prototype is:
+The most important variables for modeling include:
 
-```text
-lead_time_minutes
-```
+**Seller-side**
+- preparation time distribution
+- reliability / historical performance
+- seller category
 
-It is constructed as:
+**Order-level**
+- item type
+- order size
+- priority / urgency signals
 
-```text
-lead_time_minutes =
-prep_time_minutes
-+ pickup_delay_minutes
-+ delivery_duration_minutes
-```
+**Temporal**
+- hour of day
+- day of week
 
-At a conceptual level, the feature space includes several groups:
+**Geographic**
+- distance
+- location density
+- traffic proxies
 
-* seller features: characteristics related to seller reliability, operating style, and expected preparation behavior
-* order features: information about the order itself, such as complexity, priority, or item category
-* temporal features: time-of-day, day-of-week, and other timing signals that affect both demand and travel conditions
-* geographic or trip features: origin-destination structure, distance, and local congestion proxies
-* operational workload features: indicators of courier load, queueing pressure, or marketplace demand intensity
+**Operational**
+- courier load
+- system congestion
 
-These feature groups are intended to represent the main drivers of both average lead time and uncertainty.
+These variables influence both the expected value and the uncertainty of delivery time.
 
-## 8. Evaluation Metrics
-The prototype should be evaluated at both the predictive level and the decision level.
+## 4. Decomposition of Lead Time
 
-### Predictive metrics
-For point prediction, standard regression metrics such as MAE and RMSE help quantify average forecast error. They are useful for benchmarking baseline performance but do not fully describe uncertainty quality.
+The total lead time is composed of multiple operational components:
 
-For quantile predictions, calibration-oriented evaluation is more relevant. This includes empirical coverage analysis and related checks that compare predicted interval behavior with realized outcomes.
+$T_i = T_i^{prep} + T_i^{pickup} + T_i^{delivery}$
 
-### Decision / business metrics
-At the policy level, the most important metrics are:
+Where:
 
-* late delivery rate: the fraction of orders whose realized lead time exceeds the promised upper bound; operationally, this measures promise failures
-* average promise interval width: the average size of the buyer-facing window; operationally, this measures how much uncertainty is exposed to the buyer
-* empirical coverage: the fraction of realized deliveries that fall inside the promised interval; operationally, this indicates whether the promise policy is appropriately calibrated
+- $T_i^{prep}$: seller preparation time
+- $T_i^{pickup}$: delay until courier pickup
+- $T_i^{delivery}$: last-mile delivery duration
 
-These metrics should not be interpreted in isolation. A policy that lowers late deliveries often does so by widening the promise interval, and a narrower promise may improve customer appeal while increasing operational risk.
+Some of these components are not directly observable, which introduces additional uncertainty into the system.
 
-## 9. Central Business Trade-off
-The central business trade-off is straightforward but important: narrow intervals are attractive to buyers because they are more precise, but they increase the risk of missed promises. Wide intervals are safer operationally, but they are less compelling commercially and may reduce the perceived quality of the experience.
+## 5. Predictive Component
 
-The main purpose of the prototype is to make this trade-off visible and measurable. A useful summary visualization is a policy trade-off plot where:
+The predictive task is to estimate the conditional distribution of lead time:
 
-* x-axis = average interval width
-* y-axis = late delivery rate
+$P(T_i \mid X_i)$
 
-Each point represents a different promise policy. This makes it possible to compare how more aggressive or more conservative policies shift the balance between buyer experience and reliability.
+This can be approximated through:
 
-## 10. Assumptions and Simplifications
-This repository is intentionally a minimal prototype, so several simplifying assumptions are made explicit.
+### Point Estimation
 
-* total lead time is modeled as an additive combination of preparation, pickup, and transport components
-* seller-side components can be synthetically approximated for prototype purposes
-* a public trip-duration dataset can serve as a proxy for the transport component
-* quantile-based intervals are a reasonable first approximation to buyer-facing promise policies
-* the prototype does not model the full dispatch, routing, courier assignment, or real-time logistics control system
+$\mathbb{E}[T_i \mid X_i]$
 
-These assumptions are not hidden limitations; they are part of the deliberate scope definition. The goal is to isolate the predictive and policy problem while remaining transparent about what is abstracted away.
+### Quantile Estimation
 
-## 11. Alternative Approaches
-Several other approaches are relevant but are not implemented in this prototype.
+$Q_q(T_i \mid X_i)$
 
-* conformal prediction: attractive for producing intervals with formal finite-sample coverage guarantees under appropriate assumptions
-* full probabilistic forecasting: useful when modeling the entire conditional lead-time distribution more directly
-* survival analysis or time-to-event models: interesting because delivery completion can be viewed as a time-to-event process
-* simulation-based operational models: valuable for representing queueing, dispatch, and logistics interactions more explicitly
-* optimization-based dispatch-coupled systems: important when promise generation is tightly linked to operational decision-making and resource allocation
+Quantile estimation is particularly useful because it enables direct construction of prediction intervals, which align naturally with the product requirement.
 
-These alternatives are worth discussing conceptually, but they are outside the scope of the minimal implementation.
+## 6. Decision Component
 
-## 12. Prototype Scope
-The repository scope is intentionally limited to a minimal but decision-aware version of the challenge.
+The delivery promise shown to the buyer is not the raw prediction, but a decision derived from the predicted distribution.
 
-### Implemented
-* proxy dataset construction
-* point lead-time prediction
-* quantile-based interval prediction
-* policy trade-off evaluation
+A policy $\pi$ maps predictions into an interval:
 
-### Not implemented
-* production feature pipelines
-* online serving system
-* retraining orchestration
-* drift monitoring
-* seller notification system
-* dispatch optimization
+$[a_i, b_i] = \pi(X_i)$
 
-This scope should be read as deliberate rather than incomplete. The prototype focuses on the core logic needed to connect uncertainty-aware prediction to promise-setting policy.
+A simple and effective policy is to use quantiles:
 
-## 13. Conclusion
-This prototype frames delivery promises as a minimal decision-aware system rather than a pure regression task. It combines realistic problem framing, uncertainty-aware modeling, and explicit business policy evaluation to study how a platform can choose delivery promise intervals under uncertainty.
+$[a_i, b_i] = [Q_{\alpha}(T_i \mid X_i), Q_{\beta}(T_i \mid X_i)]$
+
+with $\alpha < \beta$.
+
+Examples:
+
+- Conservative: $[Q_{0.10}, Q_{0.95}]$
+- Balanced: $[Q_{0.10}, Q_{0.90}]$
+- Aggressive: $[Q_{0.10}, Q_{0.80}]$
+
+This explicitly separates:
+
+- Prediction: modeling uncertainty
+- Decision: choosing business trade-offs
+
+## 7. Objective Function
+
+The problem can be formulated as a constrained optimization problem:
+
+Minimize:
+
+$\mathbb{E}[b_i - a_i]$
+
+Subject to:
+
+$P(T_i > b_i) \leq \epsilon$
+
+Where:
+
+- $b_i - a_i$: interval width (user experience)
+- $P(T_i > b_i)$: late delivery probability
+- $\epsilon$: acceptable late rate threshold
+
+Alternatively, this can be expressed as a cost function:
+
+$\mathcal{L} = \lambda_1 \cdot (b_i - a_i) + \lambda_2 \cdot \mathbb{I}(T_i > b_i)$
+
+This formulation makes explicit the trade-off between:
+
+- precision (narrow intervals)
+- reliability (on-time delivery)
+
+## 8. ML Problem Definition
+
+This problem can be framed as a supervised learning task with a probabilistic component:
+
+- Input: $X_i$
+- Target: $T_i$
+
+Rather than predicting a single value, the objective is to estimate the distribution of outcomes, which enables decision-making under uncertainty.
+
+This justifies the use of:
+
+- regression models (for point estimates)
+- quantile regression models (for interval estimation)
+- or more generally, probabilistic models
+
+Compared to heuristic approaches (e.g., fixed delivery windows), an ML-based approach:
+
+- adapts to context-specific variability
+- captures heterogeneity across sellers and orders
+- enables dynamic trade-off optimization
+
+## 9. Key Trade-offs
+
+The system must navigate several trade-offs:
+
+### Precision vs Reliability
+- Narrow intervals improve user experience but increase late deliveries
+
+### Early vs Late Deliveries
+- Early deliveries may create waiting friction
+- Late deliveries strongly degrade trust
+
+### Calibration vs Sharpness
+- Well-calibrated intervals should match empirical coverage
+- Sharp intervals should be as narrow as possible
+
+## 10. Why This is a Decision Problem (Not Just Prediction)
+
+A standard regression model is insufficient because:
+
+- The goal is not to predict $T_i$, but to choose a promise interval
+- Different business strategies require different trade-offs
+- The optimal decision depends on risk tolerance
+
+Therefore, the system must explicitly separate:
+
+- Uncertainty estimation (ML problem)
+- Policy optimization (decision problem)
+
+## 11. Summary
+
+This problem can be summarized as:
+
+Estimate uncertainty in delivery lead time and transform it into a buyer-facing promise interval that balances operational reliability and user experience.
+
+This requires combining:
+
+- Predictive modeling (to estimate P($T_i$ | $X_i$))
+- Decision policies (to select intervals under business constraints)
