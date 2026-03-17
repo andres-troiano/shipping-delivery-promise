@@ -123,23 +123,17 @@ Some of these components are not directly observable, which introduces additiona
 
 The predictive task is to estimate the conditional distribution of lead time:
 
-\[
-P(T_i \mid X_i)
-\]
+$P(T_i \mid X_i)$
 
 This can be approximated through:
 
 ### Point Estimation
 
-\[
-\mathbb{E}[T_i \mid X_i]
-\]
+$\mathbb{E}[T_i \mid X_i]$
 
 ### Quantile Estimation
 
-\[
-Q_q(T_i \mid X_i)
-\]
+$Q_q(T_i \mid X_i)$
 
 Quantile estimation is particularly useful because it enables direct construction of prediction intervals, which align naturally with the product requirement.
 
@@ -147,25 +141,21 @@ Quantile estimation is particularly useful because it enables direct constructio
 
 The delivery promise shown to the buyer is not the raw prediction, but a decision derived from the predicted distribution.
 
-A policy \( \pi \) maps predictions into an interval:
+A policy $\pi$ maps predictions into an interval:
 
-\[
-[a_i, b_i] = \pi(X_i)
-\]
+$[a_i, b_i] = \pi(X_i)$
 
 A simple and effective policy is to use quantiles:
 
-\[
-[a_i, b_i] = [Q_{\alpha}(T_i \mid X_i), Q_{\beta}(T_i \mid X_i)]
-\]
+$[a_i, b_i] = [Q_{\alpha}(T_i \mid X_i), Q_{\beta}(T_i \mid X_i)]$
 
-with \( \alpha < \beta \).
+with $\alpha < \beta$.
 
 Examples:
 
-- Conservative: \([Q_{0.10}, Q_{0.95}]\)  
-- Balanced: \([Q_{0.10}, Q_{0.90}]\)  
-- Aggressive: \([Q_{0.10}, Q_{0.80}]\)  
+- Conservative: $[Q_{0.10}, Q_{0.95}]$
+- Balanced: $[Q_{0.10}, Q_{0.90}]$
+- Aggressive: $[Q_{0.10}, Q_{0.80}]$
 
 This explicitly separates:
 
@@ -178,21 +168,17 @@ The problem can be formulated as a constrained optimization problem:
 
 Minimize:
 
-\[
-\mathbb{E}[b_i - a_i]
-\]
+$\mathbb{E}[b_i - a_i]$
 
 Subject to:
 
-\[
-P(T_i > b_i) \leq \epsilon
-\]
+$P(T_i > b_i) \leq \epsilon$
 
 Where:
 
-- \( b_i - a_i \): interval width (user experience)  
-- \( P(T_i > b_i) \): late delivery probability  
-- \( \epsilon \): acceptable late rate threshold  
+- $b_i - a_i$: interval width (user experience)  
+- $P(T_i > b_i)$: late delivery probability  
+- $\epsilon$: acceptable late rate threshold  
 
 Alternatively, this can be expressed as a cost function:
 
@@ -212,8 +198,8 @@ This formulation makes explicit the trade-off between:
 
 This problem can be framed as a supervised learning task with a probabilistic component:
 
-- Input: \( X_i \)  
-- Target: \( T_i \)  
+- Input: $X_i$
+- Target: $T_i$
 
 Rather than predicting a single value, the objective is to estimate the distribution of outcomes, which enables decision-making under uncertainty.
 
@@ -248,7 +234,7 @@ The system must navigate several trade-offs:
 
 A standard regression model is insufficient because:
 
-- The goal is not to predict \( T_i \), but to choose a promise interval
+- The goal is not to predict $T_i$, but to choose a promise interval
 - Different business strategies require different trade-offs
 - The optimal decision depends on risk tolerance
 
@@ -267,5 +253,5 @@ Estimate uncertainty in delivery lead time and transform it into a buyer-facing 
 
 This requires combining:
 
-- Predictive modeling (to estimate \( P(T_i \mid X_i) \))  
+- Predictive modeling (to estimate $P(T_i \mid X_i)$)
 - Decision policies (to select intervals under business constraints)
