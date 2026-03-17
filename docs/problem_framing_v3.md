@@ -25,15 +25,15 @@ Therefore, the problem is not only predictive, but also decision-making under un
 
 ## 2. Problem Statement
 
-For each order \( i \), the system must output a delivery promise interval:
+For each order $i$, the system must output a delivery promise interval:
 
-\[
+```text
 [a_i, b_i]
-\]
+```
 
 where:
 
-- \( a_i \): promised start time (minutes from checkout)
+- $a_i$: promised start time (minutes from checkout)
 - \( b_i \): promised end time  
 
 Let:
