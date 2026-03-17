@@ -19,7 +19,7 @@ This layer is critical because it defines the business trade-off between:
 
 ## 2. Policy Definition
 
-A policy π maps predicted quantiles into a promise interval:
+A policy $π$ maps predicted quantiles into a promise interval:
 
 $[a_i, b_i] = π(X_i)$
 

@@ -274,9 +274,7 @@ Mitigation:
 - absence of real-time operational signals
 - no integration with dispatch or routing systems
 
-These limitations mean that results should be interpreted as:
-
-> a conceptual validation of the approach, not a production-ready system.
+These limitations mean that results should be interpreted as a conceptual validation of the approach, not a production-ready system.
 
 ---
 
