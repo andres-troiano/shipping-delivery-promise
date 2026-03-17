@@ -1,43 +1,292 @@
-# Assumptions and Simplifications
+# Assumptions and Risks
 
-## 1. Data Assumptions
-The prototype assumes that a public trip-duration dataset is a reasonable proxy for transport-duration variability in a last-mile delivery setting. It also assumes that synthetically generated seller-side variables can approximate relevant operational uncertainty well enough to demonstrate the modeling idea.
+## 1. Overview
 
-More broadly, the repository assumes that this hybrid proxy dataset is sufficient to illustrate delivery-promise prediction and policy trade-offs, even though it does not reflect the full complexity of a real marketplace logistics network.
+This solution is built under a set of simplifying assumptions due to:
 
-## 2. Modeling Assumptions
-The modeling design assumes that total lead time can be approximated as an additive combination of seller preparation time, pickup delay, and delivery duration. That decomposition is useful for building a structured prototype, even though real systems may contain interactions that are not cleanly additive.
+- lack of real production data
+- absence of full system observability
+- constraints of a prototype implementation
 
-The repository also assumes that gradient-boosted trees and quantile regression provide an adequate first method for baseline prediction and interval estimation. Static offline models are treated as sufficient for the challenge, and feature-target relationships are assumed stable enough for offline validation and test evaluation to be informative.
+These assumptions enable tractability but introduce risks that must be understood and mitigated.
 
-## 3. Policy Assumptions
-The policy layer assumes that buyer-facing promises can be approximated using fixed quantile-based intervals such as `[q10, q90]` or `[q10, q95]`. It further assumes that policy quality can be discussed using operationally interpretable metrics such as late-delivery rate, interval width, coverage, and early-before-start rate.
+---
 
-The prototype intentionally ignores richer utility formulations such as explicit conversion elasticity, long-term trust effects, or segment-specific business value. Those could matter in production, but they are outside the scope of a lightweight challenge implementation.
+## 2. Data Assumptions
 
-Buyer perception may also depend on how early deliveries are communicated. If many orders arrive before the promised window begins, the experience may feel inconsistent even if the delivery is technically early.
+### 2.1 Proxy Dataset Validity
 
-## 4. Production Simplifications
-The repository excludes several important production components:
+Assumption:
 
-* no routing or dispatch optimization
-* no real-time courier allocation logic
-* no online experimentation framework
-* no feature store or streaming infrastructure
-* no seller communication workflow
-* no production monitoring dashboards
-* no automated retraining orchestration
+- The constructed dataset (real trip durations + synthetic features) approximates real delivery dynamics.
 
-These simplifications are deliberate. The implementation focuses on the predictive and policy core rather than trying to reproduce a full logistics platform.
+Risk:
 
-## 5. Risk of Assumptions
-These assumptions could fail in several ways. Synthetic preparation and pickup-delay variables may not match real seller behavior or operational coordination patterns. Public urban trip-duration data may differ materially from actual marketplace delivery flows, especially if the network uses different courier behaviors, hub structures, or service areas. Demand surges during peak periods such as lunch or evening hours may also change courier availability and pickup queues in ways that are difficult to capture with static models trained on historical data.
+- Synthetic components may not reflect real-world variability
+- interactions between variables may be unrealistic
 
-Model calibration on proxy data may not transfer to production. In particular, upper quantiles that look reasonable offline may become miscalibrated when faced with real operational shocks or changes in seller behavior. Policy conclusions may also shift if business objectives include factors that are absent from this prototype, such as conversion sensitivity or customer frustration from overly wide windows.
+Mitigation:
 
-Being explicit about these risks is important. The prototype is meant to demonstrate sound framing and method selection, not to claim production validity from proxy data alone.
+- validate distributions against real data when available
+- gradually replace synthetic features with real signals
 
-## 6. Why These Simplifications Are Acceptable for the Challenge
-These simplifications are acceptable because the goal of the challenge is to demonstrate correct problem framing, uncertainty-aware ML design, decision and policy reasoning, and architecture awareness rather than operational completeness.
+---
 
-The repository is intentionally scoped to show one coherent slice of the problem well. It aims to be rigorous enough to discuss trade-offs honestly, while remaining small enough to implement and review as a technical challenge submission.
+### 2.2 Feature Availability at Checkout
+
+Assumption:
+
+- All features used in the model are available at prediction time.
+
+Risk:
+
+- some features may only be known after checkout
+- feature leakage could occur during training
+
+Mitigation:
+
+- enforce strict feature availability constraints
+- design features explicitly for inference-time availability
+
+---
+
+### 2.3 Data Quality
+
+Assumption:
+
+- historical data is clean, consistent, and correctly timestamped.
+
+Risk:
+
+- missing or noisy data
+- incorrect timestamps or event ordering
+
+Mitigation:
+
+- data validation pipelines
+- anomaly detection and filtering
+
+---
+
+## 3. Modeling Assumptions
+
+### 3.1 Lead Time Decomposition
+
+Assumption:
+
+$T_i$ = prep + pickup + delivery
+
+Risk:
+
+- components may not be independent
+- hidden factors may influence multiple components
+
+Mitigation:
+
+- allow models to learn interactions implicitly
+- consider joint modeling approaches in the future
+
+---
+
+### 3.2 Stationarity
+
+Assumption:
+
+- relationships between features and lead time remain stable over time.
+
+Risk:
+
+- demand shifts
+- seasonality changes
+- operational policy changes
+
+Mitigation:
+
+- frequent retraining
+- monitoring for drift
+
+---
+
+### 3.3 Quantile Model Calibration
+
+Assumption:
+
+- predicted quantiles are well-calibrated.
+
+Risk:
+
+- miscalibration leads to:
+  - higher-than-expected late delivery rates
+  - unreliable intervals
+
+Mitigation:
+
+- calibration monitoring
+- conformal prediction as a correction layer
+
+---
+
+## 4. Operational Assumptions
+
+### 4.1 Static Policy
+
+Assumption:
+
+- a fixed policy $(α, β)$ is applied to all orders.
+
+Risk:
+
+- suboptimal decisions for different contexts
+- over-conservative or overly aggressive behavior
+
+Mitigation:
+
+- dynamic policies based on uncertainty or context
+
+---
+
+### 4.2 Independence of Orders
+
+Assumption:
+
+- each order can be treated independently.
+
+Risk:
+
+- system-level congestion effects
+- interactions between orders
+
+Mitigation:
+
+- incorporate system-level features (e.g., courier load)
+- consider simulation-based approaches
+
+---
+
+### 4.3 Immediate Policy Execution
+
+Assumption:
+
+- once the promise is generated, it is not updated.
+
+Risk:
+
+- real-world delays are not communicated
+- inability to correct incorrect predictions
+
+Mitigation:
+
+- introduce dynamic updates or notifications
+- provide revised ETAs during delivery
+
+---
+
+## 5. System Assumptions
+
+### 5.1 Low-Latency Inference
+
+Assumption:
+
+- models can produce predictions within strict latency constraints.
+
+Risk:
+
+- feature retrieval bottlenecks
+- model complexity affecting response time
+
+Mitigation:
+
+- optimize feature store
+- use efficient models
+- precompute heavy features
+
+---
+
+### 5.2 Reliable Monitoring
+
+Assumption:
+
+- monitoring systems detect issues promptly.
+
+Risk:
+
+- delayed detection of drift or failures
+- silent degradation of performance
+
+Mitigation:
+
+- define clear alert thresholds
+- implement automated checks
+
+---
+
+## 6. Key Risks
+
+### 6.1 Distribution Shift
+
+- changes in demand patterns
+- new sellers or regions
+- external shocks (weather, events)
+
+Impact:
+
+- degraded model performance
+- increased late deliveries
+
+---
+
+### 6.2 Cold Start
+
+- new sellers with no history
+- new geographic areas
+
+Impact:
+
+- unreliable predictions
+
+Mitigation:
+
+- fallback to global averages
+- hierarchical modeling
+
+---
+
+### 6.3 Misalignment with Business Objectives
+
+- incorrect cost weighting
+- suboptimal policy selection
+
+Impact:
+
+- poor trade-off between UX and reliability
+
+Mitigation:
+
+- iterative tuning
+- A/B testing
+
+---
+
+## 7. Limitations of the Prototype
+
+- simplified dataset construction
+- limited feature richness
+- absence of real-time operational signals
+- no integration with dispatch or routing systems
+
+These limitations mean that results should be interpreted as a conceptual validation of the approach, not a production-ready system.
+
+---
+
+## 8. Summary
+
+This solution relies on several assumptions to simplify a complex real-world system.
+
+Key risks include:
+
+- data mismatch
+- model miscalibration
+- distribution shift
+- operational complexity
+
+However, with proper monitoring, retraining, and system design, these risks can be mitigated, making the approach viable for real-world deployment.
