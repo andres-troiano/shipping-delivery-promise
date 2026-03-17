@@ -182,12 +182,7 @@ Where:
 
 Alternatively, this can be expressed as a cost function:
 
-\[
-\mathcal{L} =
-\lambda_1 \cdot (b_i - a_i)
-+
-\lambda_2 \cdot \mathbb{I}(T_i > b_i)
-\]
+$\mathcal{L} = \lambda_1 \cdot (b_i - a_i) + \lambda_2 \cdot \mathbb{I}(T_i > b_i)$
 
 This formulation makes explicit the trade-off between:
 
@@ -247,9 +242,7 @@ Therefore, the system must explicitly separate:
 
 This problem can be summarized as:
 
-```text
 Estimate uncertainty in delivery lead time and transform it into a buyer-facing promise interval that balances operational reliability and user experience.
-```
 
 This requires combining:
 
