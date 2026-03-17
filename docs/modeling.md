@@ -80,14 +80,15 @@ Target:
 
 $T_i = \text{prep} + \text{pickup} + \text{delivery}$
 
-### 4.2 Train / Validation Split
+### 4.2 Train / Validation / Test Split
 
-A time-based split is used:
+A time-based split is used to reflect the production setting:
 
-- train: past data
-- validation: future data
+- Train: past data
+- Validation: future data (used for model selection and policy tuning)
+- Test: held-out future data (used only for final evaluation)
 
-This simulates production conditions and avoids leakage.
+This avoids temporal leakage and ensures that evaluation mimics real-world deployment, where predictions are made on unseen future orders.
 
 ### 4.3 Loss Function
 
@@ -112,7 +113,12 @@ Tree-based models reduce the need for heavy preprocessing.
 
 ## 5. Evaluation of Models
 
-The modeling layer is evaluated independently from the policy layer.
+The system is evaluated at two levels:
+
+1. Model-level evaluation (prediction quality)
+2. Policy-level evaluation (decision quality)
+
+This separation is critical: a well-calibrated model is necessary, but the final objective is to optimize delivery promises, not just predictions.
 
 ### 5.1 Point Model Metrics
 
@@ -131,6 +137,20 @@ Used for:
 - Coverage (for interval pairs)
 
 These ensure that predicted quantiles reflect true uncertainty.
+
+### 5.3 Policy-Level Validation
+
+Predicted quantiles are transformed into delivery intervals $[a_i, b_i]$ using predefined policies.
+
+These intervals are evaluated using:
+
+- Late delivery rate: $P(T_i > b_i)$
+- Interval width: $b_i - a_i$
+- Coverage: $P(a_i ≤ T_i ≤ b_i)$
+
+This ensures that the model is not only accurate, but also useful for downstream decision-making.
+
+Validation is performed on future (out-of-sample) data, ensuring that policy performance reflects real-world deployment conditions.
 
 ## 6. Why Quantile Regression?
 
