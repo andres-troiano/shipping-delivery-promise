@@ -10,7 +10,6 @@ env/
 .mplconfig/fontlist-v390.json
 
 .DS_Store
-specs/
 
 data/raw/*
 !data/raw/.gitkeep
