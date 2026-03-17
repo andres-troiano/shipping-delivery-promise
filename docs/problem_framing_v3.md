@@ -18,8 +18,8 @@ The system must generate this promise before fulfillment begins, under uncertain
 
 This creates a fundamental trade-off:
 
-- Narrow intervals: better user experience, higher risk of late deliveries  
-- Wide intervals: safer operationally, worse user experience  
+- Narrow intervals: better user experience, higher risk of late deliveries
+- Wide intervals: safer operationally, worse user experience
 
 Therefore, the problem is not only predictive, but also decision-making under uncertainty.
 
@@ -32,7 +32,7 @@ $[a_i, b_i]$
 where:
 
 - $a_i$: promised start time (minutes from checkout)
-- $b_i$: promised end time  
+- $b_i$: promised end time
 
 Let:
 
@@ -55,11 +55,11 @@ $X_i$
 
 Represents all information available at checkout time, including:
 
-- seller characteristics  
-- order attributes  
-- temporal context (time of day, day of week)  
-- geographic information  
-- operational state (courier availability, system load)  
+- seller characteristics
+- order attributes
+- temporal context (time of day, day of week)
+- geographic information
+- operational state (courier availability, system load)
 
 ### Target Variable
 
@@ -73,35 +73,35 @@ $[a_i, b_i]$
 
 The delivery promise interval shown to the buyer, where:
 
-- $a_i$: start of the promise window  
-- $b_i$: end of the promise window  
+- $a_i$: start of the promise window
+- $b_i$: end of the promise window
 
 ### Relevant Variables
 
 The most important variables for modeling include:
 
 **Seller-side**
-- preparation time distribution  
-- reliability / historical performance  
-- seller category  
+- preparation time distribution
+- reliability / historical performance
+- seller category
 
 **Order-level**
-- item type  
-- order size  
-- priority / urgency signals  
+- item type
+- order size
+- priority / urgency signals
 
 **Temporal**
-- hour of day  
-- day of week  
+- hour of day
+- day of week
 
 **Geographic**
-- distance  
-- location density  
-- traffic proxies  
+- distance
+- location density
+- traffic proxies
 
 **Operational**
-- courier load  
-- system congestion  
+- courier load
+- system congestion
 
 These variables influence both the expected value and the uncertainty of delivery time.
 
@@ -113,9 +113,9 @@ $T_i = T_i^{prep} + T_i^{pickup} + T_i^{delivery}$
 
 Where:
 
-- $T_i^{prep}$: seller preparation time  
-- $T_i^{pickup}$: delay until courier pickup  
-- $T_i^{delivery}$: last-mile delivery duration  
+- $T_i^{prep}$: seller preparation time
+- $T_i^{pickup}$: delay until courier pickup
+- $T_i^{delivery}$: last-mile delivery duration
 
 Some of these components are not directly observable, which introduces additional uncertainty into the system.
 
@@ -159,8 +159,8 @@ Examples:
 
 This explicitly separates:
 
-- Prediction: modeling uncertainty  
-- Decision: choosing business trade-offs  
+- Prediction: modeling uncertainty
+- Decision: choosing business trade-offs
 
 ## 7. Objective Function
 
@@ -176,9 +176,9 @@ $P(T_i > b_i) \leq \epsilon$
 
 Where:
 
-- $b_i - a_i$: interval width (user experience)  
-- $P(T_i > b_i)$: late delivery probability  
-- $\epsilon$: acceptable late rate threshold  
+- $b_i - a_i$: interval width (user experience)
+- $P(T_i > b_i)$: late delivery probability
+- $\epsilon$: acceptable late rate threshold
 
 Alternatively, this can be expressed as a cost function:
 
@@ -206,24 +206,24 @@ This justifies the use of:
 
 Compared to heuristic approaches (e.g., fixed delivery windows), an ML-based approach:
 
-- adapts to context-specific variability  
-- captures heterogeneity across sellers and orders  
-- enables dynamic trade-off optimization  
+- adapts to context-specific variability
+- captures heterogeneity across sellers and orders
+- enables dynamic trade-off optimization
 
 ## 9. Key Trade-offs
 
 The system must navigate several trade-offs:
 
 ### Precision vs Reliability
-- Narrow intervals improve user experience but increase late deliveries  
+- Narrow intervals improve user experience but increase late deliveries
 
 ### Early vs Late Deliveries
-- Early deliveries may create waiting friction  
-- Late deliveries strongly degrade trust  
+- Early deliveries may create waiting friction
+- Late deliveries strongly degrade trust
 
 ### Calibration vs Sharpness
-- Well-calibrated intervals should match empirical coverage  
-- Sharp intervals should be as narrow as possible  
+- Well-calibrated intervals should match empirical coverage
+- Sharp intervals should be as narrow as possible
 
 ## 10. Why This is a Decision Problem (Not Just Prediction)
 
