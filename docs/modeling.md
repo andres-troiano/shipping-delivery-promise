@@ -93,7 +93,9 @@ This simulates production conditions and avoids leakage.
 
 For quantile models, the pinball loss is used:
 
-![pinball loss](../assets/pb_loss.png)
+<p align="left">
+  <img src="../assets/pb_loss.png" width="400">
+</p>
 
 This directly optimizes quantile estimates.
 
