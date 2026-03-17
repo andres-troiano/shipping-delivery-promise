@@ -47,15 +47,11 @@ The system must choose $[a_i, b_i]$ such that it balances:
 
 The system can be formalized as a function:
 
-\[
-f: X_i \rightarrow [a_i, b_i]
-\]
+$f: X_i \rightarrow [a_i, b_i]$
 
 ### Inputs
 
-\[
-X_i
-\]
+$X_i$
 
 Represents all information available at checkout time, including:
 
@@ -67,22 +63,18 @@ Represents all information available at checkout time, including:
 
 ### Target Variable
 
-\[
-T_i = \text{actual delivery lead time}
-\]
+$T_i$ = actual delivery lead time
 
 This is the variable to be predicted during training.
 
 ### Outputs
 
-\[
-[a_i, b_i]
-\]
+$[a_i, b_i]$
 
 The delivery promise interval shown to the buyer, where:
 
-- \( a_i \): start of the promise window  
-- \( b_i \): end of the promise window  
+- $a_i$: start of the promise window  
+- $b_i$: end of the promise window  
 
 ### Relevant Variables
 
@@ -117,15 +109,13 @@ These variables influence both the expected value and the uncertainty of deliver
 
 The total lead time is composed of multiple operational components:
 
-\[
-T_i = T_i^{prep} + T_i^{pickup} + T_i^{delivery}
-\]
+$T_i = T_i^{prep} + T_i^{pickup} + T_i^{delivery}$
 
 Where:
 
-- \( T_i^{prep} \): seller preparation time  
-- \( T_i^{pickup} \): delay until courier pickup  
-- \( T_i^{delivery} \): last-mile delivery duration  
+- $T_i^{prep}$: seller preparation time  
+- $T_i^{pickup}$: delay until courier pickup  
+- $T_i^{delivery}$: last-mile delivery duration  
 
 Some of these components are not directly observable, which introduces additional uncertainty into the system.
 
