@@ -119,6 +119,8 @@ Where:
 
 Some of these components are not directly observable, which introduces additional uncertainty into the system.
 
+In a production system, these components can also be used to drive operational decisions such as when to notify the seller to begin preparation. This introduces an additional decision layer beyond the buyer-facing promise, which is discussed in [docs/operational_modeling.md](docs/operational_modeling.md)
+
 ## 5. Predictive Component
 
 The predictive task is to estimate the conditional distribution of lead time:

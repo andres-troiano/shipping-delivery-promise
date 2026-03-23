@@ -237,7 +237,7 @@ python -m src.evaluate_policy
 * online experimentation
 * monitoring dashboards
 * automated retraining orchestration
-* seller communication and operational workflow tooling
+* seller communication and operational workflow tooling (see [docs/operational_modeling.md](docs/operational_modeling.md) for design discussion)
 
 ## Key Assumptions
 
