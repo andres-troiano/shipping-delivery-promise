@@ -116,10 +116,10 @@ This formulation models delivery time as the sum of multiple stochastic componen
 
 The resulting dataset exhibits:
 
-- Heteroskedasticity: Variability depends on features such as seller category, order complexity, and time of day
-- Structured uncertainty: Noise is feature-dependent rather than arbitrary
-- Conditional distributions: Supports estimation of $P(T \mid X)$
-- Partial realism: Transport dynamics are data-driven, while marketplace dynamics are simulated
+- Heteroskedasticity: variability depends on features such as seller category, order complexity, and time of day
+- Structured uncertainty: noise is feature-dependent rather than arbitrary
+- Conditional distributions: supports estimation of $P(T \mid X)$
+- Partial realism: transport dynamics are data-driven, while marketplace dynamics are simulated
 
 ## 8. Assumptions
 
