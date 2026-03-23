@@ -104,6 +104,8 @@ prep_time_minutes
 
 The synthetic components are explicit and configurable, which makes the prototype easier to inspect and reason about.
 
+For a detailed description of the dataset construction process, see: [docs/dataset.md](docs/dataset.md)
+
 ## Dataset Summary
 
 ```text
