@@ -144,7 +144,7 @@ The system must balance:
 
 A conceptual objective:
 
-$L_i = λ_1 · (b_i − a_i) + λ_2 · I(T_i > b_i) + λ_3 · \text{waiting_time_i}$
+$L_i = λ_1 (b_i − a_i) + λ_2 I(T_i > b_i) + λ_3 \text{waiting_time_i}$
 
 Where:
 
