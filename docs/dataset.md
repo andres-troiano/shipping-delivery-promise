@@ -65,7 +65,7 @@ These variables introduce heterogeneity across orders and act as drivers of vari
 
 ## 5. Structured Stochastic Generation
 
-The unobserved components of delivery time are generated using **structured stochastic rules**, where both the expected value and variability depend on input features.
+The unobserved components of delivery time are generated using structured stochastic rules, where both the expected value and variability depend on input features.
 
 ### 5.1 Preparation Time
 
@@ -116,17 +116,10 @@ This formulation models delivery time as the sum of multiple stochastic componen
 
 The resulting dataset exhibits:
 
-- **Heteroskedasticity**
-  Variability depends on features such as seller category, order complexity, and time of day
-
-- **Structured uncertainty**
-  Noise is feature-dependent rather than arbitrary
-
-- **Conditional distributions**
-  Supports estimation of $P(T \mid X)$
-
-- **Partial realism**
-  Transport dynamics are data-driven, while marketplace dynamics are simulated
+- Heteroskedasticity: Variability depends on features such as seller category, order complexity, and time of day
+- Structured uncertainty: Noise is feature-dependent rather than arbitrary
+- Conditional distributions: Supports estimation of $P(T \mid X)$
+- Partial realism: Transport dynamics are data-driven, while marketplace dynamics are simulated
 
 ## 8. Assumptions
 
